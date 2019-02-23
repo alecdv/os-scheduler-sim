@@ -1,0 +1,8 @@
+# Compiled source
+*.exe
+*.o
+*.out
+*.app
+
+# VSCode files
+.vscode*
