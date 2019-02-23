@@ -3,6 +3,7 @@
 *.o
 *.out
 *.app
+simulator
 
 # VSCode files
 .vscode*
