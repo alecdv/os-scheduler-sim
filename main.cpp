@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <unistd.h>
+#include <getopt.h>
 #include "process_structs.h"
 #include "simulation.h"
 
@@ -70,14 +71,25 @@ shared_ptr<Process> readin_process(std::istream& input_stream, vector<string> pr
 int main(int argc, char *argv[])
 {
   // Process command line arguments
-  bool t_flag = false;
-  bool v_flag = false;
-  bool a_flag = false;
-  bool h_flag = false;
-  int opt;
-  while ((opt = getopt(argc, argv, "tvah")) != -1) 
+  bool t_flag = false; bool v_flag = false;
+  bool a_flag = false; bool h_flag = false;
+  int opt; int index; string algorithm;
+  const char* const short_opts = "htva:";
+  const struct option long_opts[] = 
   {
-    switch (opt)
+    {"per_thread", no_argument, 0, 't'},
+    {"verbose", no_argument, 0, 'v'},
+    {"algorithm", required_argument, 0, 'a'},
+    {"help", no_argument, 0, 'h'},
+    {0, 0, 0, 0}
+  };
+  while (true) 
+  {
+    opt = getopt_long(argc, argv, short_opts, long_opts, &index);
+    std::cout << "opt is " << std::to_string(opt) << "\n";
+    if (opt == -1) break;
+
+    switch(opt)
     {
       case 'h':
         std::cout << "DISPLAY HELP MESSAGE" << "\n";
@@ -91,13 +103,13 @@ int main(int argc, char *argv[])
         break;
       case 'a':
         a_flag = true;
+        algorithm = string(optarg);
         break;
       default:
         std::cout << "ERROR INVALID OPTION" << "\n";
         exit(0);
     }
   }
-
   // Open file
   char* file = argv[optind];
   std::ifstream file_in(file);
