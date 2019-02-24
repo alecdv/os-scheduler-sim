@@ -67,11 +67,6 @@ shared_ptr<Process> readin_process(std::istream& input_stream, vector<string> pr
   return process;
 }
 
-void process_args(bool& t_flag, bool& v_flag, bool& a_flag, bool& h_flag)
-{
-
-}
-
 int main(int argc, char *argv[])
 {
   // Process command line arguments
@@ -103,19 +98,17 @@ int main(int argc, char *argv[])
     }
   }
 
-  if (a_flag) {
-    std::cout<<"-a flag set" << "\n";
-  }
-
+  // Open file
   char* file = argv[optind];
-
-  // Direct standard input to file
-  //if (argc != 2) return 0;
-  std::freopen(file,"r",stdin);
+  std::ifstream file_in(file);
+  if (!file_in) {
+    std::cout << "INVALID INPUT FILE" << "\n";
+    exit(0);
+  }
   // Read in top line parameters:
   // num_processes, thread_switch_overhead, process_switch_overhead
   string top_line;
-  getline(std::cin, top_line);
+  getline(file_in, top_line);
   vector<string> params = tokenize(top_line);
   int num_processes = std::stoi(params[0]);
   int thread_switch_overhead = std::stoi(params[1]);
@@ -126,11 +119,11 @@ int main(int argc, char *argv[])
   Simulation simulation;
   for ( int i = 0; i < num_processes; ) // Note no incrementing in for loop expression
   {
-    getline(std::cin, line);
+    getline(file_in, line);
     if (line.empty())  continue;  // For skipping blank lines
     else
     {
-      simulation.add_process(readin_process(std::cin, tokenize(line)));
+      simulation.add_process(readin_process(file_in, tokenize(line)));
       i++; // Onle increment when a process is read in
     }
   }
