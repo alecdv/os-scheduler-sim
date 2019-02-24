@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <unistd.h>
 #include "process_structs.h"
 #include "simulation.h"
 
@@ -66,11 +67,51 @@ shared_ptr<Process> readin_process(std::istream& input_stream, vector<string> pr
   return process;
 }
 
-int main(int argc, char const *argv[])
+void process_args(bool& t_flag, bool& v_flag, bool& a_flag, bool& h_flag)
 {
+
+}
+
+int main(int argc, char *argv[])
+{
+  // Process command line arguments
+  bool t_flag = false;
+  bool v_flag = false;
+  bool a_flag = false;
+  bool h_flag = false;
+  int opt;
+  while ((opt = getopt(argc, argv, "tvah")) != -1) 
+  {
+    switch (opt)
+    {
+      case 'h':
+        std::cout << "DISPLAY HELP MESSAGE" << "\n";
+        exit(0);
+        break;
+      case 't':
+        t_flag = true;
+        break;
+      case 'v':
+        v_flag = true;
+        break;
+      case 'a':
+        a_flag = true;
+        break;
+      default:
+        std::cout << "ERROR INVALID OPTION" << "\n";
+        exit(0);
+    }
+  }
+
+  if (a_flag) {
+    std::cout<<"-a flag set" << "\n";
+  }
+
+  char* file = argv[optind];
+
   // Direct standard input to file
-  if (argc != 2) return 0;
-  std::freopen(argv[1],"r",stdin);
+  //if (argc != 2) return 0;
+  std::freopen(file,"r",stdin);
   // Read in top line parameters:
   // num_processes, thread_switch_overhead, process_switch_overhead
   string top_line;
