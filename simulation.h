@@ -17,6 +17,7 @@ struct CompareThreadsByArrivalTime{
 class Simulation
 {
 public:
+  Simulation();
   void destructive_display();
   void run_simulation();
   void add_process(std::shared_ptr<Process> process);
@@ -26,6 +27,13 @@ public:
 private:
   void handle_thread_arrival(Event event);
   std::string process_type_string(int type);
+  // Metrics
+  int total_elapsed_time;
+  int total_service_time;
+  int total_io_time;
+  int total_dispatch_time;
+  int total_idle_time;
+  // Lists and queues
   std::vector<std::shared_ptr<Process> > processes;
   //std::vector<Event> events;
   std::priority_queue<Event, std::vector<Event>, CompareEventsByArrivalTime> event_queue;

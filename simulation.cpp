@@ -9,6 +9,10 @@ using std::cout;
 using std::shared_ptr;
 
 // ***** PUBLIC METHODS
+Simulation::Simulation() 
+  : total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
+    total_service_time(0), total_idle_time(0)
+  {}
 void Simulation::destructive_display()
 {
   // Display structure of processes/threads in sumlation for testing purposes
@@ -44,6 +48,8 @@ void Simulation::destructive_display()
     cout<<"THREAD: "<<std::to_string(t->id)<<" ARRIVAL TIME: "<<std::to_string(t->arrival_time)<<"\n";
     ready_queue.pop();
   }
+  cout<<"Total elapsed time: "<<std::to_string(total_elapsed_time)<<"\n";
+  cout<<"Total idle time:"<<std::to_string(total_idle_time)<<"\n";
 }
 
 
