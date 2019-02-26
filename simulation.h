@@ -6,8 +6,12 @@
 #include <memory>
 #include "process_structs.h"
 
-struct CompareByArrivalTime{
+struct CompareEventsByArrivalTime{
   bool operator()(Event const & e1, Event const & e2);
+};
+
+struct CompareThreadsByArrivalTime{
+  bool operator()(std::shared_ptr<Thread> const & t1, std::shared_ptr<Thread> const & t2);
 };
 
 class Simulation
@@ -24,7 +28,7 @@ private:
   std::string process_type_string(int type);
   std::vector<std::shared_ptr<Process> > processes;
   //std::vector<Event> events;
-  std::priority_queue<Event, std::vector<Event>, CompareByArrivalTime> event_queue;
+  std::priority_queue<Event, std::vector<Event>, CompareEventsByArrivalTime> event_queue;
+  std::priority_queue<std::shared_ptr<Thread>, std::vector<std::shared_ptr<Thread> >, CompareThreadsByArrivalTime> ready_queue;
 };
-
 #endif

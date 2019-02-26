@@ -86,7 +86,6 @@ int main(int argc, char *argv[])
   while (true) 
   {
     opt = getopt_long(argc, argv, short_opts, long_opts, &index);
-    std::cout << "opt is " << std::to_string(opt) << "\n";
     if (opt == -1) break;
 
     switch(opt)
@@ -114,7 +113,7 @@ int main(int argc, char *argv[])
   char* file = argv[optind];
   std::ifstream file_in(file);
   if (!file_in) {
-    std::cout << "INVALID INPUT FILE" << "\n";
+    std::cout << "ERROR INVALID INPUT FILE" << "\n";
     exit(0);
   }
   // Read in top line parameters:
@@ -140,5 +139,6 @@ int main(int argc, char *argv[])
     }
   }
   simulation.run_simulation();
+  simulation.destructive_display();
   return 0;
 }

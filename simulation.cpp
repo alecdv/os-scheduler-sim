@@ -36,6 +36,14 @@ void Simulation::destructive_display()
     cout<<" in process "<<e.thread->process->id<<"\n";
     event_queue.pop();
   }
+
+  while (ready_queue.empty() == false)
+  {
+    shared_ptr<Thread> t = ready_queue.top();
+    cout<<"READY QUEUE: "<<"\n";
+    cout<<"THREAD: "<<std::to_string(t->id)<<" ARRIVAL TIME: "<<std::to_string(t->arrival_time)<<"\n";
+    ready_queue.pop();
+  }
 }
 
 
@@ -53,12 +61,16 @@ void Simulation::add_process(std::shared_ptr<Process> process)
 
 // ****** PRIVATE METHODS
 
-bool CompareByArrivalTime::operator()(Event const & e1, Event const & e2)
+bool CompareEventsByArrivalTime::operator()(Event const & e1, Event const & e2)
 {
   // Comparator for event priority queue
   return e1.time > e2.time;
 }
 
+bool CompareThreadsByArrivalTime::operator()(std::shared_ptr<Thread> const & t1, std::shared_ptr<Thread> const & t2)
+{
+  return t1->arrival_time > t2->arrival_time;
+}
 
 void Simulation::run_simulation()
 {
@@ -78,6 +90,7 @@ void Simulation::handle_thread_arrival(Event event)
 {
   // Event handling (only a state change for the thread as of now)
 event.thread->state = "READY";
+ready_queue.push(event.thread);
   // Message output
   cout << "At time " << std::to_string(event.time) << ":\n";
   cout << "\tTHREAD_ARRIVED\n";
