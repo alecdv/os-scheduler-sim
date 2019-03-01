@@ -1,3 +1,6 @@
+CXXFLAGS += -g
+all: simulator
+
 simulator: main.o simulation.o
 	g++ -o simulator main.o simulation.o
 
