@@ -30,7 +30,10 @@ private:
   void handle_dispatch_complete(Event event);
   void handle_cpu_burst_complete(Event event);
   void handle_io_burst_complete(Event event);
+  void handle_thread_complete(Event event);
   std::string process_type_string(int type);
+  std::string event_type_string(int type);
+  void vflag_output(Event event, std::string last_line);
   // Metrics
   int total_elapsed_time;
   int total_service_time;
@@ -41,7 +44,6 @@ private:
   std::shared_ptr<Thread> running_thread;
   std::vector<std::shared_ptr<Process> > processes;
   std::priority_queue<Event, std::vector<Event>, CompareEventsByArrivalTime> event_queue;
-  std::priority_queue<std::shared_ptr<Thread>, std::vector<std::shared_ptr<Thread> >, CompareThreadsByArrivalTime> ready_queue;
-  std::priority_queue<std::shared_ptr<Thread>, std::vector<std::shared_ptr<Thread> >, CompareThreadsByArrivalTime> blocked_queue;
+  std::queue<std::shared_ptr<Thread> > ready_queue;
 };
 #endif

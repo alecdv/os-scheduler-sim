@@ -50,11 +50,11 @@ struct Event
   std::shared_ptr<Thread> thread;
   std::shared_ptr<Burst> burst;
   static const int CPU_BURST_COMPLETED = 0;
-  static const int DISPATCHER_INVOKED = 1;
-  static const int PROCESS_DISPATCH_COMPLETED = 2;
-  static const int THREAD_DISPATCH_COMPLETED = 3;
-  static const int THREAD_PREEMPTED = 4;
-  static const int THREAD_COMPLETED = 5;
+  static const int THREAD_COMPLETED = 1;
+  static const int DISPATCHER_INVOKED = 2;
+  static const int PROCESS_DISPATCH_COMPLETED = 3;
+  static const int THREAD_DISPATCH_COMPLETED = 4;
+  static const int THREAD_PREEMPTED = 5;
   static const int IO_BURST_COMPLETED = 6;
   static const int THREAD_ARRIVED = 7;
 };

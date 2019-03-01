@@ -43,7 +43,7 @@ void Simulation::destructive_display()
 
   while (ready_queue.empty() == false)
   {
-    shared_ptr<Thread> t = ready_queue.top();
+    shared_ptr<Thread> t = ready_queue.front();
     cout<<"READY QUEUE: "<<"\n";
     cout<<"THREAD: "<<std::to_string(t->id)<<" ARRIVAL TIME: "<<std::to_string(t->arrival_time)<<"\n";
     ready_queue.pop();
@@ -97,6 +97,7 @@ void Simulation::run_simulation()
     if (next_event.type == Event::THREAD_DISPATCH_COMPLETED) handle_dispatch_complete(next_event);
     if (next_event.type == Event::CPU_BURST_COMPLETED) handle_cpu_burst_complete(next_event);
     if (next_event.type == Event::IO_BURST_COMPLETED) handle_io_burst_complete(next_event);
+    if (next_event.type == Event::THREAD_COMPLETED) handle_thread_complete(next_event);
     ////////////
   }
 }
@@ -112,22 +113,15 @@ void Simulation::handle_thread_arrival(Event event)
     event_queue.push(e);
   }
   // Message output
-  cout << "At time " << std::to_string(event.time) << "\n";
-  cout << "\tTHREAD_ARRIVED\n";
-  cout << "\tThread " << std::to_string(event.thread->id);
-  cout << " in process " << std::to_string(event.thread->process->id);
-  cout << " [" << process_type_string(event.thread->process->type) << "]" << "\n";
-  cout << "\tTransitioned from NEW to READY\n";
+  vflag_output(event, "Transitioned from NEW to READY");
 }
 
 void Simulation::handle_dispatcher_invoked(Event event)
 {
   // Get thread to run from top of ready queue
-  shared_ptr<Thread> next_thread = ready_queue.top();
+  shared_ptr<Thread> next_thread = ready_queue.front();
   ready_queue.pop();
   Event e(event.time, -1);
-  // TODO: FIX THIS, right now the running thread is always empty when the dispatcher
-  // is invoked, meaning we treat everything as a process switch
   if (!running_thread or running_thread->process->id != next_thread->process->id)
   {
     // Process switch
@@ -144,12 +138,11 @@ void Simulation::handle_dispatcher_invoked(Event event)
   e.thread = next_thread;
   event_queue.push(e);
   // MESSAGE OUTPUT
-  cout << "At time " << std::to_string(event.time) << "\n";
-  cout << "\tDISPATCHER_INVOKED\n";
-  cout << "\tThread " << std::to_string(e.thread->id);
-  cout << " in process " << std::to_string(e.thread->process->id);
-  cout << " [" << process_type_string(e.thread->process->type) << "]" << "\n";
-  cout << "\tSelected from " << std::to_string(ready_queue.size() + 1) << " threads; will run to completion of burst\n";
+  event.thread = e.thread;
+  std::string last_line = "Selected from " 
+    + std::to_string(ready_queue.size() + 1) 
+    + " threads; will run to completion of burst";
+  vflag_output(event, last_line);
 }
 
 void Simulation::handle_dispatch_complete(Event event)
@@ -162,12 +155,7 @@ void Simulation::handle_dispatch_complete(Event event)
   e.thread = running_thread;
   event_queue.push(e);
   // Message output
-  cout << "At time " << std::to_string(event.time) << "\n";
-  cout << "\tDISPATCH_COMPLETED\n";
-  cout << "\tThread " << std::to_string(running_thread->id);
-  cout << " in process " << std::to_string(running_thread->process->id);
-  cout << " [" << process_type_string(running_thread->process->type) << "]" << "\n";
-  cout << "\tTransitioned from READY to RUNNING\n";
+  vflag_output(event, "Transitioned from READY to RUNNING");
 }
 
 void Simulation::handle_cpu_burst_complete(Event event)
@@ -178,33 +166,23 @@ void Simulation::handle_cpu_burst_complete(Event event)
   {
     // Block for IO and add IO complete event to queue
     event.thread->state = "BLOCKED";
-    blocked_queue.push(event.thread);
     Event e = Event(event.time + current_burst->io_time, Event::IO_BURST_COMPLETED);
     e.thread = event.thread;
     event_queue.push(e);
+    vflag_output(event, "Transitioned from RUNNING to BLOCKED");
   }
   else
   {
     // Complete thread
-    cout << "At time " << std::to_string(event.time) << "\n";
-    cout << "\tTHREAD_COMPLETRED\n";
-    cout << "\tThread " << std::to_string(running_thread->id);
-    cout << " in process " << std::to_string(running_thread->process->id);
-    cout << " [" << process_type_string(running_thread->process->type) << "]" << "\n";
-    cout << "\tTransitioned from READY to EXIT\n";
+    Event e = Event(event.time, Event::THREAD_COMPLETED);
+    e.thread = event.thread;
+    event_queue.push(e);
     event.thread->state = "EXIT";
   }
   if (ready_queue.empty() != true){
     Event e = Event(event.time, Event::DISPATCHER_INVOKED);
     event_queue.push(e);
   } 
-  // Message output
-  cout << "At time " << std::to_string(event.time) << "\n";
-  cout << "\tCPU_BURST_COMPLETED\n";
-  cout << "\tThread " << std::to_string(event.thread->id);
-  cout << " in process " << std::to_string(event.thread->process->id);
-  cout << " [" << process_type_string(event.thread->process->type) << "]" << "\n";
-  cout << "\tTransitioned from RUNNING to BLOCKED\n";
 }
 
 void Simulation::handle_io_burst_complete(Event event)
@@ -223,15 +201,26 @@ void Simulation::handle_io_burst_complete(Event event)
   event.thread->burst_index++;
   ready_queue.push(event.thread);
   // Message output
-  cout << "At time " << std::to_string(event.time) << "\n";
-  cout << "\tIO_BURST_COMPLETED\n";
-  cout << "\tThread " << std::to_string(event.thread->id);
-  cout << " in process " << std::to_string(event.thread->process->id);
-  cout << " [" << process_type_string(event.thread->process->type) << "]" << "\n";
-  cout << "\tTransitioned from BLOCKED to READY\n";
+  vflag_output(event, "Transitioned from BLOCKED to READY");
 }
 
-std::string Simulation::process_type_string(int i){
+void Simulation::handle_thread_complete(Event event)
+{
+  vflag_output(event, "Transitioned from RUNNING to EXIT");
+}
+
+void Simulation::vflag_output(Event event, std::string last_line)
+{
+  cout << "At time " << std::to_string(event.time) << ":\n";
+  cout << "    " << event_type_string(event.type) << "\n";
+  cout << "    Thread " << std::to_string(event.thread->id);
+  cout << " in process " << std::to_string(event.thread->process->id);
+  cout << " [" << process_type_string(event.thread->process->type) << "]" << "\n";
+  cout << "    " << last_line << "\n\n";
+}
+
+std::string Simulation::process_type_string(int i)
+{
   switch(i)
   {
     case 0: return "SYSTEM";
@@ -243,5 +232,29 @@ std::string Simulation::process_type_string(int i){
     case 3: return "BATCH";
       break;
     default: return "INCORRECT PROCESS TYPE";
+  }
+}
+
+std::string Simulation::event_type_string(int event_type)
+{
+  switch(event_type)
+  {
+    case Event::CPU_BURST_COMPLETED: return "CPU_BURST_COMPLETED";
+      break;
+    case Event::IO_BURST_COMPLETED: return "IO_BURST_COMPLETED";
+      break;
+    case Event::DISPATCHER_INVOKED: return "DISPATCHER_INVOKED";
+      break;
+    case Event::THREAD_DISPATCH_COMPLETED: return "THREAD_DISPATCH_COMPLETED";
+      break;
+    case Event::PROCESS_DISPATCH_COMPLETED: return "PROCESS_DISPATCH_COMPLETED";
+      break;
+    case Event::THREAD_PREEMPTED: return "THREAD_PREEMPTED";
+      break;
+    case Event::THREAD_ARRIVED: return "THREAD_ARRIVED";
+      break;
+    case Event::THREAD_COMPLETED: return "THREAD_COMPLETED";
+      break;
+    default: return "INCORRECT_EVENT_TYPE";
   }
 }
