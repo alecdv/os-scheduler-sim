@@ -139,6 +139,6 @@ int main(int argc, char *argv[])
     }
   }
   simulation.run_simulation();
-  simulation.destructive_display();
+  //simulation.destructive_display();
   return 0;
 }

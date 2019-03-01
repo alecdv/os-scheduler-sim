@@ -26,6 +26,10 @@ public:
   std::vector<std::shared_ptr<Thread> > get_threads();
 private:
   void handle_thread_arrival(Event event);
+  void handle_dispatcher_invoked(Event event);
+  void handle_dispatch_complete(Event event);
+  void handle_cpu_burst_complete(Event event);
+  void handle_io_burst_complete(Event event);
   std::string process_type_string(int type);
   // Metrics
   int total_elapsed_time;
@@ -33,10 +37,11 @@ private:
   int total_io_time;
   int total_dispatch_time;
   int total_idle_time;
-  // Lists and queues
+  // Process objects/lists/queues
+  std::shared_ptr<Thread> running_thread;
   std::vector<std::shared_ptr<Process> > processes;
-  //std::vector<Event> events;
   std::priority_queue<Event, std::vector<Event>, CompareEventsByArrivalTime> event_queue;
   std::priority_queue<std::shared_ptr<Thread>, std::vector<std::shared_ptr<Thread> >, CompareThreadsByArrivalTime> ready_queue;
+  std::priority_queue<std::shared_ptr<Thread>, std::vector<std::shared_ptr<Thread> >, CompareThreadsByArrivalTime> blocked_queue;
 };
 #endif
