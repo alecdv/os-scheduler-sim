@@ -20,11 +20,14 @@ struct Process
 struct Thread
 {
   Thread(int arr_time_arg, int thr_id_arg, std::shared_ptr<Process> proc_arg)
-    : arrival_time(arr_time_arg), id(thr_id_arg), state("NEW"), process(proc_arg), burst_index(0)
+    : arrival_time(arr_time_arg), id(thr_id_arg), state("NEW"), process(proc_arg), burst_index(0),
+      start_time(0), end_time(0)
   {}
   int id;
   int arrival_time;
   int burst_index;
+  int start_time;
+  int end_time;
   std::string state;
   std::shared_ptr<Process> process;
   std::vector<std::shared_ptr<Burst> > bursts;

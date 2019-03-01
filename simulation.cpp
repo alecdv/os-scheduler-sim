@@ -158,8 +158,9 @@ void Simulation::handle_dispatch_complete(Event event)
   {
     total_dispatch_time += 3;
   }
-  // Set status of running thread to running
+  // Set status of running thread to running, if first dispatch set start time
   running_thread->state = "RUNNING";
+  if (running_thread->burst_index == 0) running_thread->start_time = event.time;
   // Get next burst
   shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
   Event e = Event(event.time + next_burst->cpu_time, Event::CPU_BURST_COMPLETED);
@@ -221,6 +222,7 @@ void Simulation::handle_io_burst_complete(Event event)
 void Simulation::handle_thread_complete(Event event)
 {
   total_elapsed_time = event.time;
+  event.thread->end_time = event.time;
   vflag_output(event, "Transitioned from RUNNING to EXIT");
 }
 
