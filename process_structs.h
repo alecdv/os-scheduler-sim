@@ -42,13 +42,21 @@ struct Burst
 
 struct Event
 {
-  Event(int time_arg, std::string type_arg)
+  Event(int time_arg, int type_arg)
     : time(time_arg), type(type_arg)
   {}
   int time;
-  std::string type;
+  int type;
   std::shared_ptr<Thread> thread;
   std::shared_ptr<Burst> burst;
+  static const int CPU_BURST_COMPLETED = 0;
+  static const int DISPATCHER_INVOKED = 1;
+  static const int PROCESS_DISPATCH_COMPLETED = 2;
+  static const int THREAD_DISPATCH_COMPLETED = 3;
+  static const int THREAD_PREEMPTED = 4;
+  static const int THREAD_COMPLETED = 5;
+  static const int IO_BURST_COMPLETED = 6;
+  static const int THREAD_ARRIVED = 7;
 };
 
 #endif

@@ -59,7 +59,7 @@ void Simulation::add_process(std::shared_ptr<Process> process)
   // and create events for thread arrivals
   processes.push_back(process);
   for (int i=0; i<process->threads.size(); i++){
-    Event event(process->threads[i]->arrival_time, "THREAD_ARRIVED");
+    Event event(process->threads[i]->arrival_time, Event::THREAD_ARRIVED);
     event.thread = process->threads[i];
     event_queue.push(event);
   }
@@ -70,12 +70,11 @@ void Simulation::add_process(std::shared_ptr<Process> process)
 bool CompareEventsByArrivalTime::operator()(Event const & e1, Event const & e2)
 {
   // Comparator for event priority queue
-  if (e1.time == e2.time and e1.type != e2.type) {
-    if (e2.type == "DISPATCH_INVOKED") {
-      return true;
-    }
+  if (e1.time == e2.time)
+  {
+    return e1.type > e2.type;
   }
-  return e1.time > e2.time;
+  else return e1.time > e2.time;
 }
 
 bool CompareThreadsByArrivalTime::operator()(std::shared_ptr<Thread> const & t1, std::shared_ptr<Thread> const & t2)
@@ -92,12 +91,12 @@ void Simulation::run_simulation()
     Event next_event = event_queue.top();
     event_queue.pop();
     // Pass to different event handlers here
-    if (next_event.type == "THREAD_ARRIVED") handle_thread_arrival(next_event);
-    if (next_event.type == "DISPATCHER_INVOKED") handle_dispatcher_invoked(next_event);
-    if (next_event.type == "PROCESS_DISPATCH_COMPLETED") handle_dispatch_complete(next_event);
-    if (next_event.type == "THREAD_DISPATCH_COMPLETED") handle_dispatch_complete(next_event);
-    if (next_event.type == "CPU_BURST_COMPLETED") handle_cpu_burst_complete(next_event);
-    if (next_event.type == "IO_BURST_COMPLETED") handle_io_burst_complete(next_event);
+    if (next_event.type == Event::THREAD_ARRIVED) handle_thread_arrival(next_event);
+    if (next_event.type == Event::DISPATCHER_INVOKED) handle_dispatcher_invoked(next_event);
+    if (next_event.type == Event::PROCESS_DISPATCH_COMPLETED) handle_dispatch_complete(next_event);
+    if (next_event.type == Event::THREAD_DISPATCH_COMPLETED) handle_dispatch_complete(next_event);
+    if (next_event.type == Event::CPU_BURST_COMPLETED) handle_cpu_burst_complete(next_event);
+    if (next_event.type == Event::IO_BURST_COMPLETED) handle_io_burst_complete(next_event);
     ////////////
   }
 }
@@ -109,7 +108,7 @@ void Simulation::handle_thread_arrival(Event event)
   ready_queue.push(event.thread);
   // If CPU idle, add dispatch invoke event at current time
   if(!running_thread) {
-    Event e = Event(event.thread->arrival_time, "DISPATCHER_INVOKED");
+    Event e = Event(event.thread->arrival_time, Event::DISPATCHER_INVOKED);
     event_queue.push(e);
   }
   // Message output
@@ -126,20 +125,20 @@ void Simulation::handle_dispatcher_invoked(Event event)
   // Get thread to run from top of ready queue
   shared_ptr<Thread> next_thread = ready_queue.top();
   ready_queue.pop();
-  Event e(event.time, "");
+  Event e(event.time, -1);
   // TODO: FIX THIS, right now the running thread is always empty when the dispatcher
   // is invoked, meaning we treat everything as a process switch
   if (!running_thread or running_thread->process->id != next_thread->process->id)
   {
     // Process switch
     e.time += 7; 
-    e.type = "PROCESS_DISPATCH_COMPLETED";
+    e.type = Event::PROCESS_DISPATCH_COMPLETED;
   }
   else
   {
     // Thread switch
     e.time += 3; 
-    e.type = "THREAD_DISPATCH_COMPLETED";
+    e.type = Event::THREAD_DISPATCH_COMPLETED;
   }
   running_thread = next_thread;
   e.thread = next_thread;
@@ -159,7 +158,7 @@ void Simulation::handle_dispatch_complete(Event event)
   running_thread->state = "RUNNING";
   // Get next burst
   shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
-  Event e = Event(event.time + next_burst->cpu_time, "CPU_BURST_COMPLETED");
+  Event e = Event(event.time + next_burst->cpu_time, Event::CPU_BURST_COMPLETED);
   e.thread = running_thread;
   event_queue.push(e);
   // Message output
@@ -180,7 +179,7 @@ void Simulation::handle_cpu_burst_complete(Event event)
     // Block for IO and add IO complete event to queue
     event.thread->state = "BLOCKED";
     blocked_queue.push(event.thread);
-    Event e = Event(event.time + current_burst->io_time, "IO_BURST_COMPLETED");
+    Event e = Event(event.time + current_burst->io_time, Event::IO_BURST_COMPLETED);
     e.thread = event.thread;
     event_queue.push(e);
   }
@@ -188,7 +187,7 @@ void Simulation::handle_cpu_burst_complete(Event event)
   {
     // Complete thread
     cout << "At time " << std::to_string(event.time) << "\n";
-    cout << "\tDISPATCH_COMPLETED]\n";
+    cout << "\tTHREAD_COMPLETRED\n";
     cout << "\tThread " << std::to_string(running_thread->id);
     cout << " in process " << std::to_string(running_thread->process->id);
     cout << " [" << process_type_string(running_thread->process->type) << "]" << "\n";
@@ -196,7 +195,7 @@ void Simulation::handle_cpu_burst_complete(Event event)
     event.thread->state = "EXIT";
   }
   if (ready_queue.empty() != true){
-    Event e = Event(event.time, "DISPATCHER_INVOKED");
+    Event e = Event(event.time, Event::DISPATCHER_INVOKED);
     event_queue.push(e);
   } 
   // Message output
@@ -210,11 +209,20 @@ void Simulation::handle_cpu_burst_complete(Event event)
 
 void Simulation::handle_io_burst_complete(Event event)
 {
+  // Determine whether to invoke dispatcher
+  // BLOCKED or EXIT status means the CPU is currently idle and should dispatch the current
+  // thread that is returning from IO
+  if (running_thread->state == "BLOCKED" or running_thread->state == "EXIT")
+  {
+    Event e = Event(event.time, Event::DISPATCHER_INVOKED);
+    e.thread = event.thread;
+    event_queue.push(e);
+  }
   // Add thread back to ready queue
   event.thread->state = "READY";
   event.thread->burst_index++;
   ready_queue.push(event.thread);
-    // Message output
+  // Message output
   cout << "At time " << std::to_string(event.time) << "\n";
   cout << "\tIO_BURST_COMPLETED\n";
   cout << "\tThread " << std::to_string(event.thread->id);
