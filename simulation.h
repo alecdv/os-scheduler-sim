@@ -34,6 +34,7 @@ private:
   std::string process_type_string(int type);
   std::string event_type_string(int type);
   void vflag_output(Event event, std::string last_line);
+  void output_totals();
   // Metrics
   int total_elapsed_time;
   int total_service_time;

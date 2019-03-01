@@ -1,6 +1,7 @@
 #include <vector>
 #include <queue>
 #include <iostream>
+#include <iomanip>
 #include <memory>
 #include "process_structs.h"
 #include "simulation.h"
@@ -100,6 +101,8 @@ void Simulation::run_simulation()
     if (next_event.type == Event::THREAD_COMPLETED) handle_thread_complete(next_event);
     ////////////
   }
+  cout << "SIMULATION COMLETED!\n";
+  output_totals();
 }
 
 void Simulation::handle_thread_arrival(Event event)
@@ -147,6 +150,14 @@ void Simulation::handle_dispatcher_invoked(Event event)
 
 void Simulation::handle_dispatch_complete(Event event)
 {
+  if (event.type == Event::PROCESS_DISPATCH_COMPLETED)
+  {
+    total_dispatch_time += 7;
+  }
+  else
+  {
+    total_dispatch_time += 3;
+  }
   // Set status of running thread to running
   running_thread->state = "RUNNING";
   // Get next burst
@@ -160,14 +171,16 @@ void Simulation::handle_dispatch_complete(Event event)
 
 void Simulation::handle_cpu_burst_complete(Event event)
 {
-  // Check for IO burst
   shared_ptr<Burst> current_burst = event.thread->bursts[event.thread->burst_index];
+  total_service_time += current_burst->cpu_time;
+  // Check for IO burst, determine whether to complete or block thread
   if(current_burst->io_time != 0)
   {
     // Block for IO and add IO complete event to queue
     event.thread->state = "BLOCKED";
     Event e = Event(event.time + current_burst->io_time, Event::IO_BURST_COMPLETED);
     e.thread = event.thread;
+    e.burst = current_burst;
     event_queue.push(e);
     vflag_output(event, "Transitioned from RUNNING to BLOCKED");
   }
@@ -187,6 +200,7 @@ void Simulation::handle_cpu_burst_complete(Event event)
 
 void Simulation::handle_io_burst_complete(Event event)
 {
+  total_io_time += event.burst->io_time;
   // Determine whether to invoke dispatcher
   // BLOCKED or EXIT status means the CPU is currently idle and should dispatch the current
   // thread that is returning from IO
@@ -206,6 +220,7 @@ void Simulation::handle_io_burst_complete(Event event)
 
 void Simulation::handle_thread_complete(Event event)
 {
+  total_elapsed_time = event.time;
   vflag_output(event, "Transitioned from RUNNING to EXIT");
 }
 
@@ -217,6 +232,30 @@ void Simulation::vflag_output(Event event, std::string last_line)
   cout << " in process " << std::to_string(event.thread->process->id);
   cout << " [" << process_type_string(event.thread->process->type) << "]" << "\n";
   cout << "    " << last_line << "\n\n";
+}
+
+void Simulation::output_totals()
+{
+  total_idle_time = total_elapsed_time - total_dispatch_time - total_service_time;
+  float cpu_utilization = ((float)total_elapsed_time - (float)total_idle_time)/(float)total_elapsed_time;
+  float cpu_efficiency = (float)total_service_time / (float)total_elapsed_time;
+  cpu_utilization *= 100;
+  cpu_efficiency *= 100;
+  cout << std::left << std::setw(20) << "Total elapsed time:";
+  cout  << std::right << std::setw(13) << std::to_string(total_elapsed_time) << "\n";
+  cout << std::left << std::setw(20) << "Total service time:";
+  cout  << std::right << std::setw(13) << std::to_string(total_service_time) << "\n";
+  cout << std::left << std::setw(20) << "Total I/O time:";
+  cout  << std::right << std::setw(13) << std::to_string(total_io_time) << "\n";
+  cout << std::left << std::setw(20) << "Total dispatch time:";
+  cout  << std::right << std::setw(13) << std::to_string(total_dispatch_time) << "\n";
+  cout << std::left << std::setw(20) << "Total idle time:";
+  cout  << std::right << std::setw(13) << std::to_string(total_idle_time) << "\n";
+  cout << "\n";
+  cout << std::left <<std::setw(20) << "CPU utilization:";
+  cout  << std::right << std::setw(13) << std::setprecision(4) << cpu_utilization << "\n";
+  cout << std::left <<std::setw(20) << "CPU efficiency:";
+  cout  << std::right << std::setw(13) << std::setprecision(4) << cpu_efficiency << "\n";
 }
 
 std::string Simulation::process_type_string(int i)
