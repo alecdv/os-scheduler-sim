@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
   // Process input file to generate simulation
   string line; 
   int processes_created = 0;
-  Simulation simulation;
+  Simulation simulation(process_switch_overhead, thread_switch_overhead);
   for ( int i = 0; i < num_processes; ) // Note no incrementing in for loop expression
   {
     getline(file_in, line);

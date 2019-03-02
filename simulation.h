@@ -17,7 +17,7 @@ struct CompareThreadsByArrivalTime{
 class Simulation
 {
 public:
-  Simulation();
+  Simulation(int process_switch_overhead, int thread_switch_overhead);
   void destructive_display();
   void run_simulation();
   void add_process(std::shared_ptr<Process> process);
@@ -36,6 +36,9 @@ private:
   void vflag_output(Event event, std::string last_line);
   void output_totals();
   void output_process_type_data();
+  // Flags and simulation data
+  int process_switch_overhead;
+  int thread_switch_overhead;
   // Metrics
   int total_elapsed_time;
   int total_service_time;

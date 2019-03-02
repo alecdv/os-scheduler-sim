@@ -10,10 +10,11 @@ using std::cout;
 using std::shared_ptr;
 
 // ***** PUBLIC METHODS
-Simulation::Simulation() 
+Simulation::Simulation(int proc_overhead, int thr_overhead) 
   : total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
     total_service_time(0), total_idle_time(0), running_thread(nullptr),
-    process_type_data(4, std::vector<int>(3))
+    process_type_data(4, std::vector<int>(3)),
+    process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead)
   {}
 void Simulation::destructive_display()
 {
@@ -131,13 +132,13 @@ void Simulation::handle_dispatcher_invoked(Event event)
   if (!running_thread or running_thread->process->id != next_thread->process->id)
   {
     // Process switch
-    e.time += 7; 
+    e.time += process_switch_overhead; 
     e.type = Event::PROCESS_DISPATCH_COMPLETED;
   }
   else
   {
     // Thread switch
-    e.time += 3; 
+    e.time += thread_switch_overhead; 
     e.type = Event::THREAD_DISPATCH_COMPLETED;
   }
   running_thread = next_thread;
@@ -155,11 +156,11 @@ void Simulation::handle_dispatch_complete(Event event)
 {
   if (event.type == Event::PROCESS_DISPATCH_COMPLETED)
   {
-    total_dispatch_time += 7;
+    total_dispatch_time += process_switch_overhead;
   }
   else
   {
-    total_dispatch_time += 3;
+    total_dispatch_time += thread_switch_overhead;
   }
   // Set status of running thread to running, if first dispatch set start time
   running_thread->state = "RUNNING";
