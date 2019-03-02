@@ -12,7 +12,8 @@ using std::shared_ptr;
 // ***** PUBLIC METHODS
 Simulation::Simulation() 
   : total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
-    total_service_time(0), total_idle_time(0), running_thread(nullptr)
+    total_service_time(0), total_idle_time(0), running_thread(nullptr),
+    process_type_data(4, std::vector<int>(3))
   {}
 void Simulation::destructive_display()
 {
@@ -101,7 +102,8 @@ void Simulation::run_simulation()
     if (next_event.type == Event::THREAD_COMPLETED) handle_thread_complete(next_event);
     ////////////
   }
-  cout << "SIMULATION COMLETED!\n";
+  cout << "SIMULATION COMLETED!\n\n";
+  output_process_type_data();
   output_totals();
 }
 
@@ -109,6 +111,7 @@ void Simulation::handle_thread_arrival(Event event)
 {
   // Event handling (only a state change for the thread as of now)
   event.thread->state = "READY";
+  event.thread->arrival_time = event.time;
   ready_queue.push(event.thread);
   // If CPU idle, add dispatch invoke event at current time
   if(!running_thread) {
@@ -223,6 +226,11 @@ void Simulation::handle_thread_complete(Event event)
 {
   total_elapsed_time = event.time;
   event.thread->end_time = event.time;
+  // Process type data
+  int proc_type = event.thread->process->type;
+  process_type_data[proc_type][0] += 1; // Thread count
+  process_type_data[proc_type][1] += event.thread->start_time - event.thread->arrival_time; // Response time
+  process_type_data[proc_type][2] += event.thread->end_time - event.thread->arrival_time; // Turnaround time
   vflag_output(event, "Transitioned from RUNNING to EXIT");
 }
 
@@ -243,21 +251,40 @@ void Simulation::output_totals()
   float cpu_efficiency = (float)total_service_time / (float)total_elapsed_time;
   cpu_utilization *= 100;
   cpu_efficiency *= 100;
-  cout << std::left << std::setw(20) << "Total elapsed time:";
-  cout  << std::right << std::setw(13) << std::to_string(total_elapsed_time) << "\n";
-  cout << std::left << std::setw(20) << "Total service time:";
-  cout  << std::right << std::setw(13) << std::to_string(total_service_time) << "\n";
-  cout << std::left << std::setw(20) << "Total I/O time:";
-  cout  << std::right << std::setw(13) << std::to_string(total_io_time) << "\n";
-  cout << std::left << std::setw(20) << "Total dispatch time:";
-  cout  << std::right << std::setw(13) << std::to_string(total_dispatch_time) << "\n";
-  cout << std::left << std::setw(20) << "Total idle time:";
-  cout  << std::right << std::setw(13) << std::to_string(total_idle_time) << "\n";
+  cout << std::left << std::setw(24) << "Total elapsed time:";
+  cout  << std::right << std::setw(9) << std::to_string(total_elapsed_time) << "\n";
+  cout << std::left << std::setw(24) << "Total service time:";
+  cout  << std::right << std::setw(9) << std::to_string(total_service_time) << "\n";
+  cout << std::left << std::setw(24) << "Total I/O time:";
+  cout  << std::right << std::setw(9) << std::to_string(total_io_time) << "\n";
+  cout << std::left << std::setw(24) << "Total dispatch time:";
+  cout  << std::right << std::setw(9) << std::to_string(total_dispatch_time) << "\n";
+  cout << std::left << std::setw(24) << "Total idle time:";
+  cout  << std::right << std::setw(9) << std::to_string(total_idle_time) << "\n";
   cout << "\n";
-  cout << std::left <<std::setw(20) << "CPU utilization:";
-  cout  << std::right << std::setw(13) << std::setprecision(4) << cpu_utilization << "\n";
-  cout << std::left <<std::setw(20) << "CPU efficiency:";
-  cout  << std::right << std::setw(13) << std::setprecision(4) << cpu_efficiency << "\n";
+  cout << std::left <<std::setw(24) << "CPU utilization:";
+  cout  << std::right << std::setw(9) << std::setprecision(2) << std::fixed << cpu_utilization << "%\n";
+  cout << std::left <<std::setw(24) << "CPU efficiency:";
+  cout  << std::right << std::setw(9) << std::setprecision(2) << std::fixed << cpu_efficiency << "%\n";
+}
+
+void Simulation::output_process_type_data()
+{
+  for(int type=0; type <= 3; type++){
+    float thr_count = (float) process_type_data[type][0];
+    float average_response_time = (float) process_type_data[type][1] / thr_count;
+    if (average_response_time != average_response_time) average_response_time = 0;
+    float average_turnaround_time = (float) process_type_data[type][2] / thr_count;
+    if (average_turnaround_time != average_turnaround_time) average_turnaround_time = 0;
+    cout << process_type_string(type) << " THREADS:\n";
+    cout << std::left << std::setw(24) << "    Total count:";
+    cout << std::right << std::setw(9) << process_type_data[type][0] << "\n"; // Actuall want the int here
+    cout << std::left << std::setw(24) << "    Avg response time:";
+    cout << std::right << std::setw(9) << std::setprecision(2) << std::fixed << average_response_time << "\n";
+    cout << std::left << std::setw(24) << "    Avg turnaround time:";
+    cout << std::right << std::setw(9) << std::setprecision(2) << std::fixed << average_turnaround_time << "\n";
+    cout << "\n";
+  }
 }
 
 std::string Simulation::process_type_string(int i)

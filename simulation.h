@@ -35,12 +35,14 @@ private:
   std::string event_type_string(int type);
   void vflag_output(Event event, std::string last_line);
   void output_totals();
+  void output_process_type_data();
   // Metrics
   int total_elapsed_time;
   int total_service_time;
   int total_io_time;
   int total_dispatch_time;
   int total_idle_time;
+  std::vector<std::vector<int> > process_type_data;
   // Process objects/lists/queues
   std::shared_ptr<Thread> running_thread;
   std::vector<std::shared_ptr<Process> > processes;
