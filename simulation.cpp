@@ -16,7 +16,8 @@ Simulation::Simulation(int proc_overhead, int thr_overhead)
     process_type_data(4, std::vector<int>(3)),
     process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead),
     v_flag(false), t_flag(false), algorithm("FCFS")
-  {}
+{}
+
 void Simulation::destructive_display()
 {
   // Display structure of processes/threads in sumlation for testing purposes
@@ -104,7 +105,8 @@ void Simulation::run_simulation()
     if (next_event.type == Event::THREAD_COMPLETED) handle_thread_complete(next_event);
     ////////////
   }
-  if (v_flag) cout << "SIMULATION COMPLETED!\n\n";
+  cout << "SIMULATION COMPLETED!\n\n";
+  if (t_flag) tflag_output();
   output_process_type_data();
   output_totals();
 }
@@ -268,9 +270,9 @@ void Simulation::output_totals()
   cout  << std::right << std::setw(9) << std::to_string(total_idle_time) << "\n";
   cout << "\n";
   cout << std::left <<std::setw(24) << "CPU utilization:";
-  cout  << std::right << std::setw(9) << std::setprecision(2) << std::fixed << cpu_utilization << "%\n";
+  cout  << std::right << std::setw(8) << std::setprecision(2) << std::fixed << cpu_utilization << "%\n";
   cout << std::left <<std::setw(24) << "CPU efficiency:";
-  cout  << std::right << std::setw(9) << std::setprecision(2) << std::fixed << cpu_efficiency << "%\n";
+  cout  << std::right << std::setw(8) << std::setprecision(2) << std::fixed << cpu_efficiency << "%\n";
 }
 
 void Simulation::output_process_type_data()
@@ -290,6 +292,39 @@ void Simulation::output_process_type_data()
     cout << std::right << std::setw(9) << std::setprecision(2) << std::fixed << average_turnaround_time << "\n";
     cout << "\n";
   }
+}
+
+void Simulation::tflag_output()
+{
+  for(int i=0; i < processes.size(); i++)
+  {
+    shared_ptr<Process> proc = processes[i];
+    cout << "Process " << proc->id << " [" << process_type_string(proc->type) << "]:\n";
+    for(int j=0; j<proc->threads.size(); j++) 
+    {
+      shared_ptr<Thread> thr = proc->threads[j];
+      cout << std::left << std::setw(15) << "    Thread " + std::to_string(thr->id) + ":";
+      cout << std::left << std::setw(12) << "ARR: " + std::to_string(thr->arrival_time);
+      cout << std::left << std::setw(12) << "CPU: " + std::to_string(total_burst_time(thr, true));
+      cout << std::left << std::setw(12) << "I/O: " + std::to_string(total_burst_time(thr, false));
+      cout << std::left << std::setw(12) << "TRT: " + std::to_string(thr->end_time - thr->arrival_time);
+      cout << std::left << std::setw(12) << "END: " + std::to_string(thr->end_time);
+      cout << "\n";
+    }
+    cout << "\n";
+  }
+}
+
+int Simulation::total_burst_time(shared_ptr<Thread> thread, bool cpu_times)
+{
+  int total = 0;
+  for(int i=0; i < thread->bursts.size(); i++)
+  {
+    shared_ptr<Burst> burst = thread->bursts[i];
+    if (cpu_times) total += burst->cpu_time;
+    else total += burst->io_time;
+  }
+  return total;
 }
 
 std::string Simulation::process_type_string(int i)

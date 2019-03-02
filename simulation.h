@@ -37,9 +37,11 @@ private:
   void handle_thread_complete(Event event);
   std::string process_type_string(int type);
   std::string event_type_string(int type);
+  int total_burst_time(std::shared_ptr<Thread> thread, bool get_cpu_times);
   void vflag_output(Event event, std::string last_line);
   void output_totals();
   void output_process_type_data();
+  void tflag_output();
   // Simulation data
   int process_switch_overhead;
   int thread_switch_overhead;
