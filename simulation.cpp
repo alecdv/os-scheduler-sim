@@ -14,7 +14,8 @@ Simulation::Simulation(int proc_overhead, int thr_overhead)
   : total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
     total_service_time(0), total_idle_time(0), running_thread(nullptr),
     process_type_data(4, std::vector<int>(3)),
-    process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead)
+    process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead),
+    v_flag(false), t_flag(false), algorithm("FCFS")
   {}
 void Simulation::destructive_display()
 {
@@ -103,7 +104,7 @@ void Simulation::run_simulation()
     if (next_event.type == Event::THREAD_COMPLETED) handle_thread_complete(next_event);
     ////////////
   }
-  cout << "SIMULATION COMLETED!\n\n";
+  if (v_flag) cout << "SIMULATION COMPLETED!\n\n";
   output_process_type_data();
   output_totals();
 }
@@ -119,8 +120,8 @@ void Simulation::handle_thread_arrival(Event event)
     Event e = Event(event.thread->arrival_time, Event::DISPATCHER_INVOKED);
     event_queue.push(e);
   }
-  // Message output
-  vflag_output(event, "Transitioned from NEW to READY");
+  // v_flag output
+  if (v_flag) vflag_output(event, "Transitioned from NEW to READY");
 }
 
 void Simulation::handle_dispatcher_invoked(Event event)
@@ -144,12 +145,15 @@ void Simulation::handle_dispatcher_invoked(Event event)
   running_thread = next_thread;
   e.thread = next_thread;
   event_queue.push(e);
-  // MESSAGE OUTPUT
-  event.thread = e.thread;
-  std::string last_line = "Selected from " 
+  // v_flag output
+  if (v_flag)
+  {
+    event.thread = e.thread;
+    std::string last_line = "Selected from " 
     + std::to_string(ready_queue.size() + 1) 
     + " threads; will run to completion of burst";
   vflag_output(event, last_line);
+  }
 }
 
 void Simulation::handle_dispatch_complete(Event event)
@@ -170,8 +174,8 @@ void Simulation::handle_dispatch_complete(Event event)
   Event e = Event(event.time + next_burst->cpu_time, Event::CPU_BURST_COMPLETED);
   e.thread = running_thread;
   event_queue.push(e);
-  // Message output
-  vflag_output(event, "Transitioned from READY to RUNNING");
+  // v_flag output
+  if (v_flag) vflag_output(event, "Transitioned from READY to RUNNING");
 }
 
 void Simulation::handle_cpu_burst_complete(Event event)
@@ -187,7 +191,7 @@ void Simulation::handle_cpu_burst_complete(Event event)
     e.thread = event.thread;
     e.burst = current_burst;
     event_queue.push(e);
-    vflag_output(event, "Transitioned from RUNNING to BLOCKED");
+    if (v_flag) vflag_output(event, "Transitioned from RUNNING to BLOCKED");
   }
   else
   {
@@ -219,8 +223,8 @@ void Simulation::handle_io_burst_complete(Event event)
   event.thread->state = "READY";
   event.thread->burst_index++;
   ready_queue.push(event.thread);
-  // Message output
-  vflag_output(event, "Transitioned from BLOCKED to READY");
+  // v_flag output
+  if (v_flag) vflag_output(event, "Transitioned from BLOCKED to READY");
 }
 
 void Simulation::handle_thread_complete(Event event)
@@ -232,7 +236,7 @@ void Simulation::handle_thread_complete(Event event)
   process_type_data[proc_type][0] += 1; // Thread count
   process_type_data[proc_type][1] += event.thread->start_time - event.thread->arrival_time; // Response time
   process_type_data[proc_type][2] += event.thread->end_time - event.thread->arrival_time; // Turnaround time
-  vflag_output(event, "Transitioned from RUNNING to EXIT");
+  if(v_flag) vflag_output(event, "Transitioned from RUNNING to EXIT");
 }
 
 void Simulation::vflag_output(Event event, std::string last_line)

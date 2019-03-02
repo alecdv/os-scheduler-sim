@@ -24,6 +24,10 @@ public:
   std::shared_ptr<Event> next_event();
   std::vector<std::shared_ptr<Process> > get_processes();
   std::vector<std::shared_ptr<Thread> > get_threads();
+  // Flags
+  bool v_flag;
+  bool t_flag;
+  std::string algorithm;
 private:
   void handle_thread_arrival(Event event);
   void handle_dispatcher_invoked(Event event);
@@ -36,7 +40,7 @@ private:
   void vflag_output(Event event, std::string last_line);
   void output_totals();
   void output_process_type_data();
-  // Flags and simulation data
+  // Simulation data
   int process_switch_overhead;
   int thread_switch_overhead;
   // Metrics

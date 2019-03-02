@@ -128,6 +128,9 @@ int main(int argc, char *argv[])
   string line; 
   int processes_created = 0;
   Simulation simulation(process_switch_overhead, thread_switch_overhead);
+  if (v_flag) simulation.v_flag = true;
+  if (t_flag) simulation.t_flag = true;
+  if (a_flag) simulation.algorithm = algorithm;
   for ( int i = 0; i < num_processes; ) // Note no incrementing in for loop expression
   {
     getline(file_in, line);
