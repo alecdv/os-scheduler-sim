@@ -1,4 +1,4 @@
-CXXFLAGS += -g
+#CXXFLAGS += -g
 all: simulator
 
 simulator: main.o simulation.o

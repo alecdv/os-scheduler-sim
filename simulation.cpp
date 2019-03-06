@@ -105,8 +105,8 @@ void Simulation::run_simulation()
     if (next_event.type == Event::THREAD_COMPLETED) handle_thread_complete(next_event);
     ////////////
   }
-  cout << "SIMULATION COMPLETED!\n\n";
   if (t_flag) tflag_output();
+  cout << "SIMULATION COMPLETED!\n\n";
   output_process_type_data();
   output_totals();
 }
