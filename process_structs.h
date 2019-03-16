@@ -21,11 +21,12 @@ struct Thread
 {
   Thread(int arr_time_arg, int thr_id_arg, std::shared_ptr<Process> proc_arg)
     : arrival_time(arr_time_arg), id(thr_id_arg), state("NEW"), process(proc_arg), burst_index(0),
-      start_time(0), end_time(0), arrive_time(0)
+      start_time(0), end_time(0), arrive_time(0), current_burst_completed_time(0)
   {}
   int id;
   int arrival_time;
   int burst_index;
+  int current_burst_completed_time;
   int arrive_time;
   int start_time;
   int end_time;
@@ -46,6 +47,8 @@ struct Burst
 
 struct Event
 {
+  Event() : time(0), type(0)
+  {}
   Event(int time_arg, int type_arg)
     : time(time_arg), type(type_arg)
   {}

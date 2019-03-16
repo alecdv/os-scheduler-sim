@@ -27,11 +27,18 @@ public:
   // Flags
   bool v_flag;
   bool t_flag;
-  std::string algorithm;
+  int quantom;
+  int algorithm;
+  static const int FCFS = 0;
+  static const int RR = 1;
+  static const int PRIORITY = 2;
+  static const int CUSTOM = 3;
 private:
   void handle_thread_arrival(Event event);
   void handle_dispatcher_invoked(Event event);
   void handle_dispatch_complete(Event event);
+  void FCFS_dispComplete_nextEvent(Event dispatch_event, Event& new_event);
+  void RR_dispComplete_nextEvent(Event dispatch_event, Event& new_event);
   void handle_cpu_burst_complete(Event event);
   void handle_io_burst_complete(Event event);
   void handle_thread_complete(Event event);

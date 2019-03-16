@@ -11,6 +11,14 @@
 
 using std::vector; using std::string; using std::shared_ptr;
 
+void set_simulation_alg(string algorithm_arg, Simulation& simulation)
+{
+  if (algorithm_arg == "FCFS") simulation.algorithm = Simulation::FCFS;
+  else if (algorithm_arg == "RR") simulation.algorithm = Simulation::RR;
+  else if (algorithm_arg == "PRIORITY") simulation.algorithm = Simulation::PRIORITY;
+  else simulation.algorithm = Simulation::CUSTOM;
+}
+
 vector<string> tokenize(string str)
 {
   // create stringstream and tokenize input into words
@@ -130,7 +138,7 @@ int main(int argc, char *argv[])
   Simulation simulation(process_switch_overhead, thread_switch_overhead);
   if (v_flag) simulation.v_flag = true;
   if (t_flag) simulation.t_flag = true;
-  if (a_flag) simulation.algorithm = algorithm;
+  if (a_flag) set_simulation_alg(algorithm, simulation);
   for ( int i = 0; i < num_processes; ) // Note no incrementing in for loop expression
   {
     getline(file_in, line);

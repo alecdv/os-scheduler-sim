@@ -15,7 +15,7 @@ Simulation::Simulation(int proc_overhead, int thr_overhead)
     total_service_time(0), total_idle_time(0), running_thread(nullptr),
     process_type_data(4, std::vector<int>(3)),
     process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead),
-    v_flag(false), t_flag(false), algorithm("FCFS")
+    v_flag(false), t_flag(false), algorithm(FCFS), quantom(3)
 {}
 
 void Simulation::destructive_display()
@@ -171,13 +171,43 @@ void Simulation::handle_dispatch_complete(Event event)
   // Set status of running thread to running, if first dispatch set start time
   running_thread->state = "RUNNING";
   if (running_thread->burst_index == 0) running_thread->start_time = event.time;
-  // Get next burst
-  shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
-  Event e = Event(event.time + next_burst->cpu_time, Event::CPU_BURST_COMPLETED);
-  e.thread = running_thread;
-  event_queue.push(e);
+  // Queue next event
+  Event new_event;
+  switch (algorithm)
+  {
+    case FCFS: FCFS_dispComplete_nextEvent(event, new_event);
+      break;
+    case RR: RR_dispComplete_nextEvent(event, new_event);
+      break;
+    default: ;
+  }
+  event_queue.push(new_event);
   // v_flag output
   if (v_flag) vflag_output(event, "Transitioned from READY to RUNNING");
+}
+
+void Simulation::FCFS_dispComplete_nextEvent(Event dispatch_event, Event& new_event)
+{
+  shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
+  new_event.time = dispatch_event.time + next_burst->cpu_time;
+  new_event.type = Event::CPU_BURST_COMPLETED;
+  new_event.thread = running_thread;
+}
+
+void Simulation::RR_dispComplete_nextEvent(Event dispatch_event, Event& new_event)
+{
+  shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
+  int burst_amount_remaining = next_burst->cpu_time - running_thread->current_burst_completed_time;
+  if (burst_amount_remaining < quantom) // No preempt necessary just complete the burst
+  {
+    new_event.time = dispatch_event.time + burst_amount_remaining;
+    new_event.type = Event::CPU_BURST_COMPLETED;
+  }
+  else // Preempt after quantom
+  {
+    new_event.time = dispatch_event.time + quantom;
+    new_event.type = Event::THREAD_PREEMPTED;
+  }
 }
 
 void Simulation::handle_cpu_burst_complete(Event event)
