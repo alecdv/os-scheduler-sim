@@ -37,6 +37,7 @@ private:
   void handle_thread_arrival(Event event);
   void add_thread_to_ready_queue(std::shared_ptr<Thread> thread);
   void handle_dispatcher_invoked(Event event);
+  std::shared_ptr<Thread> get_next_thread();
   void handle_dispatch_complete(Event event);
   void FCFS_dispComplete_nextEvent(Event dispatch_event, Event& new_event);
   void RR_dispComplete_nextEvent(Event dispatch_event, Event& new_event);
@@ -51,6 +52,7 @@ private:
   void output_totals();
   void output_process_type_data();
   void tflag_output();
+  int num_ready_threads();
   // Metrics
   int total_elapsed_time;
   int total_dispatch_time;

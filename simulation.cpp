@@ -9,7 +9,7 @@
 using std::cout; 
 using std::shared_ptr;
 
-// ***** PUBLIC METHODS
+// Constructor
 Simulation::Simulation(int proc_overhead, int thr_overhead) 
   : v_flag(false), t_flag(false), 
     total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
@@ -139,8 +139,7 @@ void Simulation::add_thread_to_ready_queue(shared_ptr<Thread> thread)
 void Simulation::handle_dispatcher_invoked(Event event)
 {
   // Get thread to run from top of ready queue
-  shared_ptr<Thread> next_thread = ready_queue.front();
-  ready_queue.pop();
+  shared_ptr<Thread> next_thread = get_next_thread();
   Event e(event.time, -1);
   if (!running_thread or running_thread->process->id != next_thread->process->id)
   {
@@ -165,10 +164,35 @@ void Simulation::handle_dispatcher_invoked(Event event)
                               " will run to completion of burst" 
                               : " alotted time slice of " + std::to_string(quantom) + ".";
     std::string last_line = "Selected from " 
-    + std::to_string(ready_queue.size() + 1) 
+    + std::to_string(num_ready_threads() + 1) 
     + " thread(s);" + last_part;
   vflag_output(event, last_line);
   }
+}
+
+shared_ptr<Thread> Simulation::get_next_thread()
+{
+  if (algorithm == PRIORITY)
+  {
+    for(auto it = priority_ready_queues.begin(); it!=priority_ready_queues.end(); it++)
+    {
+      if(not it->empty())
+      {
+        shared_ptr<Thread> next_thread = it->front();
+        it->pop();
+        return next_thread;
+      }
+    }
+  }
+  else // Algorithm is not PRIORITY
+  {
+    shared_ptr<Thread> next_thread = ready_queue.front();
+    ready_queue.pop();
+    return next_thread;
+  }
+  // This should never happen, there must always be something in the ready queue if the
+  // dispatcher is invoked
+  return nullptr;
 }
 
 void Simulation::handle_dispatch_complete(Event event)
@@ -249,10 +273,24 @@ void Simulation::handle_cpu_burst_complete(Event event)
     event_queue.push(e);
     event.thread->state = "EXIT";
   }
-  if (ready_queue.empty() != true){
+  if (num_ready_threads() != 0){
     Event e = Event(event.time, Event::DISPATCHER_INVOKED);
     event_queue.push(e);
   } 
+}
+
+int Simulation::num_ready_threads()
+{
+  if (algorithm == PRIORITY)
+  {
+    int num_threads = 0;
+    for (auto it = priority_ready_queues.begin(); it!=priority_ready_queues.end(); it++)
+    {
+      num_threads += it->size();
+    }
+    return num_threads;
+  }
+  else return ready_queue.size();
 }
 
 void Simulation::handle_io_burst_complete(Event event)
@@ -270,7 +308,7 @@ void Simulation::handle_io_burst_complete(Event event)
   // Add thread back to ready queue
   event.thread->state = "READY";
   event.thread->burst_index++;
-  ready_queue.push(event.thread);
+  add_thread_to_ready_queue(event.thread);
   // v_flag output
   if (v_flag) vflag_output(event, "Transitioned from BLOCKED to READY");
 }
@@ -292,7 +330,7 @@ void Simulation::handle_thread_preempted(Event event)
   // Update preempted thread, put on ready queue
   event.thread->current_burst_completed_time += quantom;
   event.thread->state = "READY";
-  ready_queue.push(event.thread);
+  add_thread_to_ready_queue(event.thread);
   // Invoke dispatcher
   Event e = Event(event.time, Event::DISPATCHER_INVOKED);
   event_queue.push(e);
