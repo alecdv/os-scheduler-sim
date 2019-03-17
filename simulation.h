@@ -18,7 +18,6 @@ class Simulation
 {
 public:
   Simulation(int process_switch_overhead, int thread_switch_overhead);
-  void destructive_display();
   void run_simulation();
   void add_process(std::shared_ptr<Process> process);
   std::shared_ptr<Event> next_event();
@@ -39,8 +38,7 @@ private:
   void handle_dispatcher_invoked(Event event);
   std::shared_ptr<Thread> get_next_thread();
   void handle_dispatch_complete(Event event);
-  void FCFS_dispComplete_nextEvent(Event dispatch_event, Event& new_event);
-  void RR_dispComplete_nextEvent(Event dispatch_event, Event& new_event);
+  Event get_dispatch_end_event(Event dispatch_event);
   void handle_cpu_burst_complete(Event event);
   void handle_io_burst_complete(Event event);
   void handle_thread_complete(Event event);

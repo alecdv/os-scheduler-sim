@@ -18,45 +18,6 @@ Simulation::Simulation(int proc_overhead, int thr_overhead)
     running_thread(nullptr), quantom(3), algorithm(FCFS), priority_ready_queues(4)
 {}
 
-void Simulation::destructive_display()
-{
-  // Display structure of processes/threads in sumlation for testing purposes
-  // Note: this is destructive to the simulation because the event queue is emptied
-  // Cannot display and then run simulation in same execution
-  for(shared_ptr<Process> proc : processes)
-  {
-    cout<<"Process: "<<std::to_string(proc->id)<<" TYPE: "<<std::to_string(proc->type)<<"\n";
-    for (shared_ptr<Thread> thr : proc->threads)
-    {
-      cout<<"---Thread: "<<std::to_string(thr->id)<<" TIME: "<<std::to_string(thr->arrival_time);
-      cout<<"Proc:"<<std::to_string(thr->process->id)<<"\n";
-      for (shared_ptr<Burst> b : thr->bursts)
-      {
-        cout<<"------Burst: ";
-        cout<<"CPU: "<<std::to_string(b->cpu_time)<<" IO: "<<std::to_string(b->io_time);
-        cout<<" THR:"<<std::to_string(b->thread->id)<<std::endl;
-      }
-    }
-  }
-  while (event_queue.empty() == false)
-  {
-    Event e = event_queue.top();
-    cout<<"EVENT "<<e.type<<" at time "<<std::to_string(e.time)<<" from thread "<<e.thread->id;
-    cout<<" in process "<<e.thread->process->id<<"\n";
-    event_queue.pop();
-  }
-
-  while (ready_queue.empty() == false)
-  {
-    shared_ptr<Thread> t = ready_queue.front();
-    cout<<"READY QUEUE: "<<"\n";
-    cout<<"THREAD: "<<std::to_string(t->id)<<" ARRIVAL TIME: "<<std::to_string(t->arrival_time)<<"\n";
-    ready_queue.pop();
-  }
-  cout<<"Total elapsed time: "<<std::to_string(total_elapsed_time)<<"\n";
-  cout<<"Total idle time:"<<std::to_string(total_idle_time)<<"\n";
-}
-
 
 void Simulation::add_process(std::shared_ptr<Process> process)
 {
@@ -210,45 +171,36 @@ void Simulation::handle_dispatch_complete(Event event)
   running_thread->state = "RUNNING";
   if (running_thread->burst_index == 0) running_thread->start_time = event.time;
   // Queue next event
-  Event new_event;
-  switch (algorithm)
-  {
-    case FCFS: FCFS_dispComplete_nextEvent(event, new_event);
-      break;
-    case PRIORITY: FCFS_dispComplete_nextEvent(event, new_event);
-      break;
-    case RR: RR_dispComplete_nextEvent(event, new_event);
-      break;
-    default: ;
-  }
+  Event new_event = get_dispatch_end_event(event);
   event_queue.push(new_event);
   // v_flag output
   if (v_flag) vflag_output(event, "Transitioned from READY to RUNNING");
 }
 
-void Simulation::FCFS_dispComplete_nextEvent(Event dispatch_event, Event& new_event)
+Event Simulation::get_dispatch_end_event(Event dispatch_event)
 {
   shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
-  new_event.time = dispatch_event.time + next_burst->cpu_time;
-  new_event.type = Event::CPU_BURST_COMPLETED;
-  new_event.thread = running_thread;
-}
-
-void Simulation::RR_dispComplete_nextEvent(Event dispatch_event, Event& new_event)
-{
-  shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
-  int burst_amount_remaining = next_burst->cpu_time - running_thread->current_burst_completed_time;
-  if (burst_amount_remaining <= quantom) // No preempt necessary just complete the burst
+  if (algorithm == FCFS or algorithm == PRIORITY)
   {
-    new_event.time = dispatch_event.time + burst_amount_remaining;
-    new_event.type = Event::CPU_BURST_COMPLETED;
+    Event new_event = Event(dispatch_event.time + next_burst->cpu_time, Event::CPU_BURST_COMPLETED);
     new_event.thread = running_thread;
+    return new_event;
   }
-  else // Preempt after quantom
+  else // algorithm == RR
   {
-    new_event.time = dispatch_event.time + quantom;
-    new_event.type = Event::THREAD_PREEMPTED;
-    new_event.thread = running_thread;
+    int burst_amount_remaining = next_burst->cpu_time - running_thread->current_burst_completed_time;
+    if (burst_amount_remaining <= quantom) // No preempt necessary just complete the burst
+    {
+      Event new_event = Event(dispatch_event.time + burst_amount_remaining, Event::CPU_BURST_COMPLETED);
+      new_event.thread = running_thread;
+      return new_event;
+    }
+    else // Preempt after quantom
+    {
+      Event new_event = Event(dispatch_event.time + quantom, Event::THREAD_PREEMPTED); 
+      new_event.thread = running_thread;
+      return new_event;
+    }
   }
 }
 
