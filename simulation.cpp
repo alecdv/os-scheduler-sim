@@ -75,9 +75,10 @@ void Simulation::add_process(std::shared_ptr<Process> process)
 bool CompareEventsByArrivalTime::operator()(Event const & e1, Event const & e2)
 {
   // Comparator for event priority queue
+  // Sorts by earliest time, then lowest Event::Type number, then highest thread id
   if (e1.time == e2.time)
   {
-    return e1.type > e2.type;
+    return ((e1.type == e2.type) ? e1.thread->id < e2.thread->id : e1.type > e2.type);
   }
   else return e1.time > e2.time;
 }
@@ -213,6 +214,8 @@ void Simulation::handle_dispatch_complete(Event event)
   switch (algorithm)
   {
     case FCFS: FCFS_dispComplete_nextEvent(event, new_event);
+      break;
+    case PRIORITY: FCFS_dispComplete_nextEvent(event, new_event);
       break;
     case RR: RR_dispComplete_nextEvent(event, new_event);
       break;
