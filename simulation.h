@@ -35,6 +35,7 @@ public:
   static const int CUSTOM = 3;
 private:
   void handle_thread_arrival(Event event);
+  void add_thread_to_ready_queue(std::shared_ptr<Thread> thread);
   void handle_dispatcher_invoked(Event event);
   void handle_dispatch_complete(Event event);
   void FCFS_dispComplete_nextEvent(Event dispatch_event, Event& new_event);
@@ -65,5 +66,6 @@ private:
   std::vector<std::shared_ptr<Process> > processes;
   std::priority_queue<Event, std::vector<Event>, CompareEventsByArrivalTime> event_queue;
   std::queue<std::shared_ptr<Thread> > ready_queue;
+  std::vector<std::queue<std::shared_ptr<Thread > > > priority_ready_queues;
 };
 #endif

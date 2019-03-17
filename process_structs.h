@@ -9,11 +9,14 @@ struct Process; struct Thread; struct Burst; struct Event;
 
 struct Process
 {
-  Process(int proc_id, int proc_type) 
+  enum Type {
+    SYSTEM = 0, INTERACTIVE = 1, NORMAL = 2, BATCH = 3
+  };
+  Process(int proc_id, Type proc_type) 
     : id(proc_id), type(proc_type) 
   {}
   int id;
-  int type;
+  Type type;
   std::vector<std::shared_ptr<Thread> > threads;
 };
 

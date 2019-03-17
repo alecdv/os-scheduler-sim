@@ -15,7 +15,7 @@ Simulation::Simulation(int proc_overhead, int thr_overhead)
     total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
     total_service_time(0), total_idle_time(0), process_type_data(4, std::vector<int>(3)),
     process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead),
-    running_thread(nullptr), quantom(3), algorithm(FCFS)
+    running_thread(nullptr), quantom(3), algorithm(FCFS), priority_ready_queues(4)
 {}
 
 void Simulation::destructive_display()
@@ -89,8 +89,7 @@ bool CompareThreadsByArrivalTime::operator()(std::shared_ptr<Thread> const & t1,
 
 void Simulation::run_simulation()
 {
-  // Ultimately there will be multiple run_sim methods for different
-  // Simulation algorithms
+  // Main event loop
   while(event_queue.empty() == false)
   {
     Event next_event = event_queue.top();
@@ -117,7 +116,7 @@ void Simulation::handle_thread_arrival(Event event)
   // Event handling (only a state change for the thread as of now)
   event.thread->state = "READY";
   event.thread->arrival_time = event.time;
-  ready_queue.push(event.thread);
+  add_thread_to_ready_queue(event.thread);
   // If CPU idle, add dispatch invoke event at current time
   if(!running_thread) {
     Event e = Event(event.thread->arrival_time, Event::DISPATCHER_INVOKED);
@@ -125,6 +124,16 @@ void Simulation::handle_thread_arrival(Event event)
   }
   // v_flag output
   if (v_flag) vflag_output(event, "Transitioned from NEW to READY");
+}
+
+void Simulation::add_thread_to_ready_queue(shared_ptr<Thread> thread)
+{
+  if (algorithm == PRIORITY)
+  {
+    Process::Type process_type = thread->process->type;
+    priority_ready_queues[process_type].push(thread);
+  }
+  else ready_queue.push(thread);
 }
 
 void Simulation::handle_dispatcher_invoked(Event event)

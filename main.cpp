@@ -58,7 +58,7 @@ shared_ptr<Thread> readin_thread(std::istream& input_stream, vector<string> thre
 shared_ptr<Process> readin_process(std::istream& input_stream, vector<string> process_params)
 {
   int proc_id = std::stoi(process_params[0]);
-  int proc_type = std::stoi(process_params[1]);
+  Process::Type proc_type = static_cast<Process::Type>(std::stoi(process_params[1]));
   shared_ptr<Process> process = std::make_shared<Process>(proc_id, proc_type);
   for (int i = 0; i < std::stoi(process_params[2]); )
   {
