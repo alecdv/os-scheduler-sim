@@ -13,12 +13,10 @@ using std::vector; using std::string; using std::shared_ptr;
 
 void set_simulation_alg(string algorithm_arg, Simulation& simulation)
 {
-  std::cout << "IN SET SIM ALG()" << std::endl;
   if (algorithm_arg == "FCFS") simulation.algorithm = Simulation::FCFS;
   else if (algorithm_arg == "RR") simulation.algorithm = Simulation::RR;
   else if (algorithm_arg == "PRIORITY") simulation.algorithm = Simulation::PRIORITY;
   else simulation.algorithm = Simulation::CUSTOM;
-  std::cout << "END OF SET SIM ALG() " << std::to_string(simulation.algorithm) << std::endl;
 }
 
 vector<string> tokenize(string str)
@@ -81,7 +79,6 @@ shared_ptr<Process> readin_process(std::istream& input_stream, vector<string> pr
 int main(int argc, char *argv[])
 {
   // Process command line arguments
-  std::cout << "FIRST LINE" << std::endl;
   bool t_flag = false; bool v_flag = false;
   bool a_flag = false; bool h_flag = false;
   int opt; int index; string algorithm;
@@ -142,7 +139,6 @@ int main(int argc, char *argv[])
   if (v_flag) simulation.v_flag = true;
   if (t_flag) simulation.t_flag = true;
   if (a_flag) set_simulation_alg(algorithm, simulation);
-  std::cout << "Out OF SET SIM ALG() " << std::to_string(simulation.algorithm) << std::endl;
   for ( int i = 0; i < num_processes; ) // Note no incrementing in for loop expression
   {
     getline(file_in, line);

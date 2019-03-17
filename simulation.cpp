@@ -152,9 +152,12 @@ void Simulation::handle_dispatcher_invoked(Event event)
   if (v_flag)
   {
     event.thread = e.thread;
+    std::string last_part = ((algorithm==FCFS)||(algorithm==PRIORITY)) ?
+                              " will run to completion of burst" 
+                              : " alotted time slice of " + std::to_string(quantom) + ".";
     std::string last_line = "Selected from " 
     + std::to_string(ready_queue.size() + 1) 
-    + " threads; will run to completion of burst";
+    + " thread(s);" + last_part;
   vflag_output(event, last_line);
   }
 }
@@ -199,7 +202,7 @@ void Simulation::RR_dispComplete_nextEvent(Event dispatch_event, Event& new_even
 {
   shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
   int burst_amount_remaining = next_burst->cpu_time - running_thread->current_burst_completed_time;
-  if (burst_amount_remaining < quantom) // No preempt necessary just complete the burst
+  if (burst_amount_remaining <= quantom) // No preempt necessary just complete the burst
   {
     new_event.time = dispatch_event.time + burst_amount_remaining;
     new_event.type = Event::CPU_BURST_COMPLETED;
