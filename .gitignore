@@ -7,3 +7,5 @@ simulator
 
 # VSCode files
 .vscode*
+# Others
+*.txt

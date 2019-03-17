@@ -11,11 +11,11 @@ using std::shared_ptr;
 
 // ***** PUBLIC METHODS
 Simulation::Simulation(int proc_overhead, int thr_overhead) 
-  : total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
-    total_service_time(0), total_idle_time(0), running_thread(nullptr),
-    process_type_data(4, std::vector<int>(3)),
+  : v_flag(false), t_flag(false), 
+    total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
+    total_service_time(0), total_idle_time(0), process_type_data(4, std::vector<int>(3)),
     process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead),
-    v_flag(false), t_flag(false), algorithm(FCFS), quantom(3)
+    running_thread(nullptr), quantom(3), algorithm(FCFS)
 {}
 
 void Simulation::destructive_display()
@@ -103,6 +103,7 @@ void Simulation::run_simulation()
     if (next_event.type == Event::CPU_BURST_COMPLETED) handle_cpu_burst_complete(next_event);
     if (next_event.type == Event::IO_BURST_COMPLETED) handle_io_burst_complete(next_event);
     if (next_event.type == Event::THREAD_COMPLETED) handle_thread_complete(next_event);
+    if (next_event.type == Event::THREAD_PREEMPTED) handle_thread_preempted(next_event);
     ////////////
   }
   if (t_flag) tflag_output();
@@ -202,11 +203,13 @@ void Simulation::RR_dispComplete_nextEvent(Event dispatch_event, Event& new_even
   {
     new_event.time = dispatch_event.time + burst_amount_remaining;
     new_event.type = Event::CPU_BURST_COMPLETED;
+    new_event.thread = running_thread;
   }
   else // Preempt after quantom
   {
     new_event.time = dispatch_event.time + quantom;
     new_event.type = Event::THREAD_PREEMPTED;
+    new_event.thread = running_thread;
   }
 }
 
@@ -214,6 +217,7 @@ void Simulation::handle_cpu_burst_complete(Event event)
 {
   shared_ptr<Burst> current_burst = event.thread->bursts[event.thread->burst_index];
   total_service_time += current_burst->cpu_time;
+  event.thread->current_burst_completed_time = 0; // For preemptive alogrithms, flag as not in middle of burst
   // Check for IO burst, determine whether to complete or block thread
   if(current_burst->io_time != 0)
   {
@@ -269,6 +273,19 @@ void Simulation::handle_thread_complete(Event event)
   process_type_data[proc_type][1] += event.thread->start_time - event.thread->arrival_time; // Response time
   process_type_data[proc_type][2] += event.thread->end_time - event.thread->arrival_time; // Turnaround time
   if(v_flag) vflag_output(event, "Transitioned from RUNNING to EXIT");
+}
+
+void Simulation::handle_thread_preempted(Event event)
+{
+  // Update preempted thread, put on ready queue
+  event.thread->current_burst_completed_time += quantom;
+  event.thread->state = "READY";
+  ready_queue.push(event.thread);
+  // Invoke dispatcher
+  Event e = Event(event.time, Event::DISPATCHER_INVOKED);
+  event_queue.push(e);
+  // v-flag output
+  if (v_flag) vflag_output(event, "Transitioned from RUNNING to READY");
 }
 
 void Simulation::vflag_output(Event event, std::string last_line)

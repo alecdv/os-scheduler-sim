@@ -42,6 +42,7 @@ private:
   void handle_cpu_burst_complete(Event event);
   void handle_io_burst_complete(Event event);
   void handle_thread_complete(Event event);
+  void handle_thread_preempted(Event event);
   std::string process_type_string(int type);
   std::string event_type_string(int type);
   int total_burst_time(std::shared_ptr<Thread> thread, bool get_cpu_times);
@@ -49,16 +50,16 @@ private:
   void output_totals();
   void output_process_type_data();
   void tflag_output();
+  // Metrics
+  int total_elapsed_time;
+  int total_dispatch_time;
+  int total_io_time;
+  int total_service_time;
+  int total_idle_time;
+  std::vector<std::vector<int> > process_type_data;
   // Simulation data
   int process_switch_overhead;
   int thread_switch_overhead;
-  // Metrics
-  int total_elapsed_time;
-  int total_service_time;
-  int total_io_time;
-  int total_dispatch_time;
-  int total_idle_time;
-  std::vector<std::vector<int> > process_type_data;
   // Process objects/lists/queues
   std::shared_ptr<Thread> running_thread;
   std::vector<std::shared_ptr<Process> > processes;
