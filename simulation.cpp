@@ -15,7 +15,8 @@ Simulation::Simulation(int proc_overhead, int thr_overhead)
     total_elapsed_time(0), total_dispatch_time(0), total_io_time(0), 
     total_service_time(0), total_idle_time(0), process_type_data(4, std::vector<int>(3)),
     process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead),
-    running_thread(nullptr), quantom(3), algorithm(FCFS), priority_ready_queues(4)
+    running_thread(nullptr), quantom(3), algorithm(FCFS), priority_ready_queues(4),
+    current_process_id(-1)
 {}
 
 
@@ -78,17 +79,12 @@ void Simulation::handle_thread_arrival(Event event)
   // Event handling (only a state change for the thread as of now)
   event.thread->state = "READY";
   event.thread->arrival_time = event.time;
-  add_thread_to_ready_queue(event.thread);
-  // If CPU idle, add dispatch invoke event at current time
-  if(!running_thread) {
-    Event e = Event(event.thread->arrival_time, Event::DISPATCHER_INVOKED);
-    event_queue.push(e);
-  }
+  add_thread_to_ready_queue(event.thread, event.time);
   // v_flag output
   if (v_flag) vflag_output(event, "Transitioned from NEW to READY");
 }
 
-void Simulation::add_thread_to_ready_queue(shared_ptr<Thread> thread)
+void Simulation::add_thread_to_ready_queue(shared_ptr<Thread> thread, int current_time)
 {
   if (algorithm == PRIORITY)
   {
@@ -96,6 +92,13 @@ void Simulation::add_thread_to_ready_queue(shared_ptr<Thread> thread)
     priority_ready_queues[process_type].push(thread);
   }
   else ready_queue.push(thread);
+  // Id cpu is idle, invoke dispatcher
+  if (not running_thread)
+    {
+      Event e = Event(current_time, Event::DISPATCHER_INVOKED);
+      e.thread = thread;
+      event_queue.push(e);
+    }
 }
 
 void Simulation::handle_dispatcher_invoked(Event event)
@@ -103,7 +106,7 @@ void Simulation::handle_dispatcher_invoked(Event event)
   // Get thread to run from top of ready queue
   shared_ptr<Thread> next_thread = get_next_thread();
   Event e(event.time, -1);
-  if (!running_thread or running_thread->process->id != next_thread->process->id)
+  if (current_process_id != next_thread->process->id)
   {
     // Process switch
     e.time += process_switch_overhead; 
@@ -159,6 +162,7 @@ shared_ptr<Thread> Simulation::get_next_thread()
 
 void Simulation::handle_dispatch_complete(Event event)
 {
+  assert(event.thread == running_thread);
   if (event.type == Event::PROCESS_DISPATCH_COMPLETED)
   {
     total_dispatch_time += process_switch_overhead;
@@ -167,9 +171,10 @@ void Simulation::handle_dispatch_complete(Event event)
   {
     total_dispatch_time += thread_switch_overhead;
   }
-  // Set status of running thread to running, if first dispatch set start time
+  // Set status of running thread to running, set start time, set current process
   running_thread->state = "RUNNING";
   if (running_thread->burst_index == 0) running_thread->start_time = event.time;
+  current_process_id = event.thread->process->id;
   // Queue next event
   Event new_event = get_dispatch_end_event(event);
   event_queue.push(new_event);
@@ -231,7 +236,8 @@ void Simulation::handle_cpu_burst_complete(Event event)
   if (num_ready_threads() != 0){
     Event e = Event(event.time, Event::DISPATCHER_INVOKED);
     event_queue.push(e);
-  } 
+  }
+  running_thread = nullptr;
 }
 
 int Simulation::num_ready_threads()
@@ -254,16 +260,10 @@ void Simulation::handle_io_burst_complete(Event event)
   // Determine whether to invoke dispatcher
   // BLOCKED or EXIT status means the CPU is currently idle and should dispatch the current
   // thread that is returning from IO
-  if (running_thread->state == "BLOCKED" or running_thread->state == "EXIT")
-  {
-    Event e = Event(event.time, Event::DISPATCHER_INVOKED);
-    e.thread = event.thread;
-    event_queue.push(e);
-  }
   // Add thread back to ready queue
   event.thread->state = "READY";
   event.thread->burst_index++;
-  add_thread_to_ready_queue(event.thread);
+  add_thread_to_ready_queue(event.thread, event.time);
   // v_flag output
   if (v_flag) vflag_output(event, "Transitioned from BLOCKED to READY");
 }
@@ -285,10 +285,8 @@ void Simulation::handle_thread_preempted(Event event)
   // Update preempted thread, put on ready queue
   event.thread->current_burst_completed_time += quantom;
   event.thread->state = "READY";
-  add_thread_to_ready_queue(event.thread);
-  // Invoke dispatcher
-  Event e = Event(event.time, Event::DISPATCHER_INVOKED);
-  event_queue.push(e);
+  running_thread = nullptr;
+  add_thread_to_ready_queue(event.thread, event.time);
   // v-flag output
   if (v_flag) vflag_output(event, "Transitioned from RUNNING to READY");
 }
