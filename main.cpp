@@ -4,12 +4,30 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <iomanip>
 #include <unistd.h>
 #include <getopt.h>
 #include "process_structs.h"
 #include "simulation.h"
 
 using std::vector; using std::string; using std::shared_ptr;
+
+void display_help()
+{
+  using std::cout;
+  string indent = "  ";
+  cout << "Operating system scheduling simulator\n";
+  cout << "Arguments:\n";
+  cout << indent << "-v, --verbose\n";
+  cout << indent << indent << "Output information about every state-changing event and scheduling decision.\n";
+  cout << indent << "-t, --per_thread\n";
+  cout << indent << indent << "Output additional per-thread statistics for arrival time, service time, etc.\n";
+  cout << indent << "-a\n";
+  cout << indent << indent << "The scheduling algorithm to use. One of FCFs, RR, PRIORITY, or CUSTOM.\n";
+  cout << indent << "Final argument should be the input .txt file\n";
+  cout << indent << indent << "This file should inlcude process, thread, and burst data.\n";
+  cout << indent << indent << "See README for specific formatting\n";
+}
 
 void set_simulation_alg(string algorithm_arg, Simulation& simulation)
 {
@@ -99,7 +117,7 @@ int main(int argc, char *argv[])
     switch(opt)
     {
       case 'h':
-        std::cout << "DISPLAY HELP MESSAGE" << "\n";
+        display_help();
         exit(0);
         break;
       case 't':
