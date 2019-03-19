@@ -9,6 +9,61 @@
 using std::cout; 
 using std::shared_ptr;
 
+CustomReadyQueue::CustomReadyQueue()
+  : short_queues(4), long_queues(4), dynamic_quantom(-1), 
+    num_threads(0), total_remaining_time(0), avg_age(-1)
+{}
+
+shared_ptr<Thread> CustomReadyQueue::fetch_thread()
+{
+  shared_ptr<Thread> next_thread = nullptr;
+  for(auto it = short_queues.begin(); it!=short_queues.end(); it++)
+  {
+    // First check short queues in priority order
+    if(not it->empty())
+    {
+      next_thread = it->front();
+      it->pop();
+      break;
+    }
+  }
+  if (next_thread == nullptr)
+  {
+      for(auto it = long_queues.begin(); it!=long_queues.end(); it++)
+    {
+    // First check short queues in priority order
+      if(not it->empty())
+      {
+        next_thread = it->front();
+        it->pop();
+        break;
+      }
+    } 
+  }
+  // adjust metrics
+  assert(next_thread != nullptr);
+  num_threads--;
+  int burst_remaining_time = next_thread->bursts[next_thread->burst_index]->cpu_time 
+    - next_thread->current_burst_completed_time;
+  total_remaining_time -= burst_remaining_time;
+  assert(total_remaining_time==num_threads || num_threads != 0);
+  if (num_threads != 0) dynamic_quantom = total_remaining_time;
+  // Should not happen, dispatcher only invoked when there is a thread in ready queue
+  return next_thread; ;
+}
+
+void CustomReadyQueue::push_thread(shared_ptr<Thread> thread)
+{
+  int burst_remaining_time = thread->bursts[thread->burst_index]->cpu_time - thread->current_burst_completed_time;
+  num_threads++;
+  total_remaining_time += burst_remaining_time;
+  int average_remaining_time = total_remaining_time / num_threads; // this should round down
+  dynamic_quantom = (average_remaining_time < QUANTOM_MAX) ? average_remaining_time : QUANTOM_MAX; 
+  (burst_remaining_time <= dynamic_quantom) ? 
+    short_queues[thread->process->type].push(thread)
+    : long_queues[thread->process->type].push(thread);
+}
+
 // Constructor
 Simulation::Simulation(int proc_overhead, int thr_overhead) 
   : v_flag(false), t_flag(false), 
@@ -16,7 +71,7 @@ Simulation::Simulation(int proc_overhead, int thr_overhead)
     total_service_time(0), total_idle_time(0), process_type_data(4, std::vector<int>(3)),
     process_switch_overhead(proc_overhead), thread_switch_overhead(thr_overhead),
     running_thread(nullptr), quantom(3), algorithm(FCFS), priority_ready_queues(4),
-    current_process_id(-1)
+    current_process_id(-1), custom_ready_queue(nullptr)
 {}
 
 
@@ -52,6 +107,8 @@ bool CompareThreadsByArrivalTime::operator()(std::shared_ptr<Thread> const & t1,
 
 void Simulation::run_simulation()
 {
+  // Custom ready queue initialization
+  if (algorithm == CUSTOM) custom_ready_queue = std::make_shared<CustomReadyQueue>();
   // Main event loop
   while(event_queue.empty() == false)
   {
@@ -90,6 +147,11 @@ void Simulation::add_thread_to_ready_queue(shared_ptr<Thread> thread, int curren
   {
     Process::Type process_type = thread->process->type;
     priority_ready_queues[process_type].push(thread);
+  }
+  else if (algorithm == CUSTOM)
+  {
+    custom_ready_queue->push_thread(thread);
+    quantom = custom_ready_queue->dynamic_quantom;
   }
   else ready_queue.push(thread);
   // Id cpu is idle, invoke dispatcher
@@ -149,7 +211,13 @@ shared_ptr<Thread> Simulation::get_next_thread()
       }
     }
   }
-  else // Algorithm is not PRIORITY
+  else if (algorithm == CUSTOM)
+  {
+    shared_ptr<Thread> next_thread = custom_ready_queue->fetch_thread();
+    quantom = custom_ready_queue->dynamic_quantom;
+    return next_thread;
+  }
+  else // Algorithm is not PRIORITY or CUSTOM
   {
     shared_ptr<Thread> next_thread = ready_queue.front();
     ready_queue.pop();
@@ -163,6 +231,7 @@ shared_ptr<Thread> Simulation::get_next_thread()
 void Simulation::handle_dispatch_complete(Event event)
 {
   assert(event.thread == running_thread);
+  // Metrics
   if (event.type == Event::PROCESS_DISPATCH_COMPLETED)
   {
     total_dispatch_time += process_switch_overhead;
@@ -173,7 +242,7 @@ void Simulation::handle_dispatch_complete(Event event)
   }
   // Set status of running thread to running, set start time, set current process
   running_thread->state = "RUNNING";
-  if (running_thread->burst_index == 0) running_thread->start_time = event.time;
+  if (running_thread->start_time == -1) running_thread->start_time = event.time;
   current_process_id = event.thread->process->id;
   // Queue next event
   Event new_event = get_dispatch_end_event(event);
@@ -184,6 +253,7 @@ void Simulation::handle_dispatch_complete(Event event)
 
 Event Simulation::get_dispatch_end_event(Event dispatch_event)
 {
+  assert(running_thread == dispatch_event.thread);
   shared_ptr<Burst> next_burst = running_thread->bursts[running_thread->burst_index];
   if (algorithm == FCFS or algorithm == PRIORITY)
   {
@@ -191,7 +261,7 @@ Event Simulation::get_dispatch_end_event(Event dispatch_event)
     new_event.thread = running_thread;
     return new_event;
   }
-  else // algorithm == RR
+  else // algorithm == RR or CUSTOM
   {
     int burst_amount_remaining = next_burst->cpu_time - running_thread->current_burst_completed_time;
     if (burst_amount_remaining <= quantom) // No preempt necessary just complete the burst
@@ -204,6 +274,7 @@ Event Simulation::get_dispatch_end_event(Event dispatch_event)
     {
       Event new_event = Event(dispatch_event.time + quantom, Event::THREAD_PREEMPTED); 
       new_event.thread = running_thread;
+      new_event.thread->current_burst_completed_time += quantom;
       return new_event;
     }
   }
@@ -212,7 +283,7 @@ Event Simulation::get_dispatch_end_event(Event dispatch_event)
 void Simulation::handle_cpu_burst_complete(Event event)
 {
   shared_ptr<Burst> current_burst = event.thread->bursts[event.thread->burst_index];
-  total_service_time += current_burst->cpu_time;
+  total_service_time += current_burst->cpu_time; // Metric
   event.thread->current_burst_completed_time = 0; // For preemptive alogrithms, flag as not in middle of burst
   // Check for IO burst, determine whether to complete or block thread
   if(current_burst->io_time != 0)
@@ -251,12 +322,16 @@ int Simulation::num_ready_threads()
     }
     return num_threads;
   }
+  else if (algorithm == CUSTOM)
+  {
+    return custom_ready_queue->num_threads;
+  }
   else return ready_queue.size();
 }
 
 void Simulation::handle_io_burst_complete(Event event)
 {
-  total_io_time += event.burst->io_time;
+  total_io_time += event.burst->io_time; // Metric
   // Determine whether to invoke dispatcher
   // BLOCKED or EXIT status means the CPU is currently idle and should dispatch the current
   // thread that is returning from IO
@@ -270,6 +345,7 @@ void Simulation::handle_io_burst_complete(Event event)
 
 void Simulation::handle_thread_complete(Event event)
 {
+  // Metrics
   total_elapsed_time = event.time;
   event.thread->end_time = event.time;
   // Process type data
@@ -283,7 +359,7 @@ void Simulation::handle_thread_complete(Event event)
 void Simulation::handle_thread_preempted(Event event)
 {
   // Update preempted thread, put on ready queue
-  event.thread->current_burst_completed_time += quantom;
+  //event.thread->current_burst_completed_time += quantom;
   event.thread->state = "READY";
   running_thread = nullptr;
   add_thread_to_ready_queue(event.thread, event.time);

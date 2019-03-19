@@ -6,6 +6,20 @@
 #include <memory>
 #include "process_structs.h"
 
+struct CustomReadyQueue
+{
+  CustomReadyQueue();
+  std::vector<std::queue<std::shared_ptr<Thread> > > short_queues;
+  std::vector<std::queue<std::shared_ptr<Thread> > > long_queues;
+  double dynamic_quantom;
+  int num_threads;
+  int total_remaining_time;
+  int avg_age;
+  const int QUANTOM_MAX = 20;
+  std::shared_ptr<Thread> fetch_thread();
+  void push_thread(std::shared_ptr<Thread>);
+};
+
 struct CompareEventsByArrivalTime{
   bool operator()(Event const & e1, Event const & e2);
 };
@@ -68,5 +82,6 @@ private:
   std::queue<std::shared_ptr<Thread> > ready_queue;
   std::vector<std::queue<std::shared_ptr<Thread> > > priority_ready_queues;
   int current_process_id;
+  std::shared_ptr<CustomReadyQueue> custom_ready_queue;
 };
 #endif

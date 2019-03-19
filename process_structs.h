@@ -23,7 +23,7 @@ struct Process
 struct Thread
 {
   Thread(int arr_time_arg, int thr_id_arg, std::shared_ptr<Process> proc_arg)
-    : id(thr_id_arg), state("NEW"), process(proc_arg), start_time(0), arrival_time(arr_time_arg), 
+    : id(thr_id_arg), state("NEW"), process(proc_arg), start_time(-1), arrival_time(arr_time_arg), 
       end_time(0), burst_index(0), current_burst_completed_time(0), arrive_time(0)
   {}
   int id;
