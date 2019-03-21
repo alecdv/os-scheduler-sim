@@ -1,3 +1,13 @@
+/**
+ * Operating Systems
+ * Project 2 - OS Scheduling Simulator
+ * Alec De Vivo
+ * 
+ * simulation.h
+ * 
+ * Defines simulation properties and functions.
+ */
+
 #ifndef SIMULATION_H
 #define SIMULATION_H
 

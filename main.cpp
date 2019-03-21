@@ -1,3 +1,14 @@
+/**
+ * Operating Systems
+ * Project 2 - OS Scheduling Simulator
+ * Alec De Vivo
+ * 
+ * main.cpp
+ * Reads in process/thread/burst data from input file, parses command line arguments, builds process data
+ * structures and passes to simlation, and launches simulation.
+ */
+
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -14,6 +25,9 @@ using std::vector; using std::string; using std::shared_ptr;
 
 void display_help()
 {
+  /**
+   * Outputs help text for -h --help argument.
+   */
   using std::cout;
   string indent = "  ";
   cout << "Operating system scheduling simulator\n";
@@ -31,6 +45,10 @@ void display_help()
 
 void set_simulation_alg(string algorithm_arg, Simulation& simulation)
 {
+  /**
+   * Parses -a --algorithm argument and sets the algorithm property on the Simulation
+   * object appropriately.
+   */
   if (algorithm_arg == "FCFS") simulation.algorithm = Simulation::FCFS;
   else if (algorithm_arg == "RR") simulation.algorithm = Simulation::RR;
   else if (algorithm_arg == "PRIORITY") simulation.algorithm = Simulation::PRIORITY;
@@ -39,7 +57,11 @@ void set_simulation_alg(string algorithm_arg, Simulation& simulation)
 
 vector<string> tokenize(string str)
 {
-  // create stringstream and tokenize input into words
+  /**
+   * Creates stringstream and tokenize str input into words vector. 
+   * 
+   * Returns vector of individual words from str.
+   */
   std::stringstream stream(str);
   string word;
   vector<string> words;
@@ -51,7 +73,11 @@ vector<string> tokenize(string str)
 
 shared_ptr<Thread> readin_thread(std::istream& input_stream, vector<string> thread_params, shared_ptr<Process> process, int thread_id)
 {
-  // Read in thread and burst data and return pointer to thread object
+  /**
+   * Parses thread level data from input file.
+   * 
+   * Returns pointer to thread object.
+   */
   int thread_arrival_time = std::stoi(thread_params[0]);
   shared_ptr<Thread> thread = std::make_shared<Thread>(thread_arrival_time, thread_id, process);
   for (int i = 0; i < std::stoi(thread_params[1]); )
@@ -75,6 +101,11 @@ shared_ptr<Thread> readin_thread(std::istream& input_stream, vector<string> thre
 
 shared_ptr<Process> readin_process(std::istream& input_stream, vector<string> process_params)
 {
+   /**
+   * Parses process level data from input file.
+   * 
+   * Returns pointer to process object.
+   */
   int proc_id = std::stoi(process_params[0]);
   Process::Type proc_type = static_cast<Process::Type>(std::stoi(process_params[1]));
   shared_ptr<Process> process = std::make_shared<Process>(proc_id, proc_type);
@@ -96,9 +127,13 @@ shared_ptr<Process> readin_process(std::istream& input_stream, vector<string> pr
 
 int main(int argc, char *argv[])
 {
-  // Process command line arguments
+   /**
+   * Main function parses args, loops through input file to generate simulation data structures,
+   * and launches simulation.
+   */
   bool t_flag = false; bool v_flag = false;
   bool a_flag = false; bool h_flag = false;
+  // Process command line arguments
   int opt; int index; string algorithm;
   const char* const short_opts = "htva:";
   const struct option long_opts[] = 
@@ -135,7 +170,7 @@ int main(int argc, char *argv[])
         exit(0);
     }
   }
-  // Open file
+  // Open input file
   char* file = argv[optind];
   std::ifstream file_in(file);
   if (!file_in) {
@@ -167,6 +202,7 @@ int main(int argc, char *argv[])
       i++; // Onle increment when a process is read in
     }
   }
+  // Launch simulation
   simulation.run_simulation();
   return 0;
 }

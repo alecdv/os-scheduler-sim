@@ -1,3 +1,13 @@
+/**
+ * Operating Systems
+ * Project 2 - OS Scheduling Simulator
+ * Alec De Vivo
+ * 
+ * process_structs.h
+ * Defines basic process data structures: Processes, threads, bursts, and events.
+ */
+
+
 #ifndef PROCESS_STRUCTS_H
 #define PROCESS_STRUCTS_H
 
@@ -59,6 +69,7 @@ struct Event
   int type;
   std::shared_ptr<Thread> thread;
   std::shared_ptr<Burst> burst;
+  // Event types
   static const int CPU_BURST_COMPLETED = 0;
   static const int THREAD_COMPLETED = 1;
   static const int DISPATCHER_INVOKED = 2;
