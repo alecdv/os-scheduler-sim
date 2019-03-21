@@ -13,6 +13,7 @@
 #include <queue>
 #include <iostream>
 #include <iomanip>
+#include <cassert>
 #include <memory>
 #include "process_structs.h"
 #include "simulation.h"

@@ -16,6 +16,7 @@
 #include <string>
 #include <memory>
 #include <iomanip>
+#include <cassert>
 #include <unistd.h>
 #include <getopt.h>
 #include "process_structs.h"
