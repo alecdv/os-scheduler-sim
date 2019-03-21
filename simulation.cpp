@@ -47,7 +47,10 @@ shared_ptr<Thread> CustomReadyQueue::fetch_thread()
     - next_thread->current_burst_completed_time;
   total_remaining_time -= burst_remaining_time;
   assert(total_remaining_time==num_threads || num_threads != 0);
-  if (num_threads != 0) dynamic_quantom = total_remaining_time;
+  if (num_threads != 0){
+    int average_remaining_time = total_remaining_time/num_threads;
+    dynamic_quantom = (average_remaining_time < QUANTOM_MAX) ? average_remaining_time : QUANTOM_MAX; ;
+  }
   // Should not happen, dispatcher only invoked when there is a thread in ready queue
   return next_thread; ;
 }
