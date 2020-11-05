@@ -7,3 +7,6 @@ simulator
 
 # VSCode files
 .vscode*
+
+# Other
+.DS_Store
